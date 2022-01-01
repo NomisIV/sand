@@ -1,0 +1,78 @@
+# Features
+#
+
+## Statically typed
+
+## If interpreted, typechecked before execution
+
+## Parenthesis are optional if there is only one or less parameter
+
+## The "object.method" -dot is otional if the method is on the same line as the object
+
+# Syntax rules
+
+- If a function takes 0 or 1 parameters, parenthesis are optional
+- If a method of an object is located directly after the object (on the same line), no "object.method"-dot is needed
+- If a line starts with ".", it is a method of the object described by the presceding line.
+
+# Type signatures
+
+- None - None can be any type
+
+# Type patterns
+- ([T]: List<T>)
+- ((T) {U}: Function<T, U>)
+- ({T: U}: Map<T, U>)
+- ((*.T: U): Class<has method / field named U with type T>) // Classes are like Maps, but the value does not have to be the same in the entire map. Also, Maps cannot be forced to have a field
+
+- (Printable): (*.to_string(() {String})) {} // This is a type alias
+
+- Main.write: (Printable) {} // stdout
+- Main.error: (Printable) {} // stderr
+- Main.read:  () {String} // stdin
+- Main.args:  [String]
+- Main.exit:  (Number) {} = (code) {...}
+
+- List<T>.filter: (T) {Bool} = (n)      {...}
+- List<T>.map:    (T) {*}    = (n)      {...}
+- List<T>.reduce: (*) {T}    = (acc, n) {...}
+- List<T>.find:   (T) {Boolean}
+- List<T>.push:   (T) {}
+- List<T>.push:   ([T]) {}
+- List<T>.pop:    () {T}          = () { self.remove self.len sub 1 }
+- List<T>.remove: (Number) {T}
+- List<*>.len:    () {Number}
+- List<T>.get:    (Range) {T}
+- List<T>.get:    (Number, Number) {T} = (start, end) {...}
+- List<T>.get:    (Number) {T} = (n) {...}
+- List<T>.split:  (Number) {(T, T)}
+- List<*.to_string(){String}>.to_string: () {String}
+	
+- Number.add: (Number) {Number}
+- Number.sub: (Number) {Number}
+- Number.mul: (Number) {Number}
+- Number.div: (Number) {Number}
+- Number.pow: (Number) {Number}
+- Number.root: (Number) {Number}
+- Number.mod: (Number) {Number}
+- Number.to_string: () {String}
+
+- Number.eq: (Number) {Boolean} // (==)
+- Number.ne: (Number) {Boolean} // (!=)
+- Number.gt: (Number) {Boolean} // (>)
+- Number.lt: (Number) {Boolean} // (<) oh fuck>
+- Number.ge: (Number) {Boolean} // (>=)
+- Number.le: (Number) {Boolean} // (<=) no!>
+
+- Number.times: (Function<(){}>) {} = (f) { [0..self] map (n) { f() } }
+
+- Boolean.eq: (Boolean) {Boolean}
+- Boolean.ne: (Boolean) {Boolean}
+- Boolean.and: (Boolean) {Boolean}
+- Boolean.or: (Boolean) {Boolean}
+- Boolean.not: () {Boolean}
+- Boolean.to_string: () {String}
+
+- String: [Char]
+- String.to_string: () {Number} = () { self }
+- String.to_number: () {Number}
