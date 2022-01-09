@@ -10,6 +10,8 @@
 // Sum the first 1000 integers
 main print [1..1000] reduce add
 
+main.print([1..1000].reduce(Number.add))
+
 // `main` is the main object of the program
 // print is a function in main to print to stdout
 // [1..1000] initializes a list of the 1000 fisrt integers
@@ -34,11 +36,11 @@ main.print
 
 // Primes
 
-def Number divisible(Number){Boolean} = (n) {
+let Number divisible(Number){Boolean} = (n) {
     self mod n eq 0
 }
 
-def Number prime {Boolean} = {
+let Number prime {Boolean} = {
     [2..self]
         .find self divisible
         .eq None
@@ -49,11 +51,11 @@ main print [1..100]
 
 // Strict primes
 
-def Number.divisible(Number){Boolean} = (n) {
+let Number.divisible(Number){Boolean} = (n) {
     self.mod(n).eq(0)
 }
 
-def Number.prime(){Boolean} = () {
+let Number.prime(){Boolean} = () {
     [2..self]
         .find(self.divisible)
         .eq(None)
