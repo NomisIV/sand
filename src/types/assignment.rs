@@ -1,18 +1,25 @@
-use super::Value;
-use crate::Parseable;
+use crate::*;
 use anyhow::Result;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Assignment {
-    name: String, // TODO: Use variable instead
+    var: Var,
     value: Value,
 }
 
 impl Parseable for Assignment {
     fn parse(string: &str) -> Option<Result<Self>> {
         let (before, after) = string.split_once('=')?;
-        let name = before.strip_prefix("let")?.trim().to_string();
+        let var = Var::parse(before.strip_prefix("let")?.trim())?.ok()?;
         let value = Value::parse(after.trim())?.ok()?;
-        Some(Ok(Assignment { name, value }))
+        Some(Ok(Assignment { var, value }))
+    }
+}
+
+impl Interpretable for Assignment {
+    fn interpret(&self, scope: &mut Scope) -> Result<Value> {
+        // println!("== Interpreting assignment:\n{:?}", self);
+        scope.insert(self.var.clone(), self.value.clone());
+        Ok(Value::Nope)
     }
 }

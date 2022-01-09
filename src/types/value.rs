@@ -1,17 +1,16 @@
-use super::Fun;
-use super::Num;
-use super::Str;
-use super::Var;
-use crate::Parseable;
-use anyhow::Error;
-use anyhow::Result;
+use crate::*;
+use anyhow::{Error, Result};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Value {
+    Nope,
     Str(Str),
     Num(Num),
     Fun(Fun),
     Var(Var),
+    Met(Met),
+    Obj(Obj),
+    Intrinsic(Intrinsic),
 }
 
 impl Parseable for Value {
@@ -60,8 +59,47 @@ impl Parseable for Value {
                 }
             };
             return Some(Ok(Value::Var(var)));
+        } else if let Some(met_result) = Met::parse(string) {
+            let met = match met_result {
+                Ok(met) => met,
+                Err(err) => {
+                    return Some(Err(Error::msg(format!(
+                        "ERROR: Cannot parse the following method:\n{}\nbecause of:\n{}",
+                        string, err
+                    ))))
+                }
+            };
+            return Some(Ok(Value::Met(met)));
+        // } else if let Some(obj_result) = Obj::parse(string) {
+        //     let obj = match obj_result {
+        //         Ok(obj) => obj,
+        //         Err(err) => {
+        //             return Some(Err(Error::msg(format!(
+        //                 "ERROR: Cannot parse the following object:\n{}\nbecause of:\n{}",
+        //                 string, err
+        //             ))))
+        //         }
+        //     };
+        //     return Some(Ok(Value::Obj(obj)));
         } else {
             return None;
         }
+    }
+}
+
+impl Interpretable for Value {
+    fn interpret(&self, _scope: &mut Scope) -> Result<Value> {
+        // println!("== Interpreting value:\n{:?}", self);
+        // match self {
+        //     Self::Nope => Ok(Self::Nope),
+        //     Self::Str(str) => Ok(Value::Str(str.clone())),
+        //     Self::Num(num) => Ok(Value::Num(num.clone())),
+        //     Self::Obj(obj) => Ok(Value::Obj(obj.clone())),
+        //     Self::Fun(fun) => fun.interpret(scope),
+        //     Self::Var(var) => var.interpret(scope),
+        //     Self::Met(met) => met.interpret(scope),
+        //     Self::Intrinsic(intrinsic) => intrinsic.interpret(scope),
+        // }
+        Ok(self.clone())
     }
 }

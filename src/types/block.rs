@@ -1,9 +1,7 @@
-use crate::Parseable;
+use crate::*;
 use anyhow::{Error, Result};
 
-use super::statement::Statement;
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Block {
     statements: Vec<Statement>,
 }
@@ -51,5 +49,16 @@ impl Parseable for Block {
         }
 
         Some(Ok(Self { statements }))
+    }
+}
+
+impl Interpretable for Block {
+    fn interpret(&self, scope: &mut Scope) -> Result<Value> {
+        // println!("== Interpreting block:\n{:?}", self);
+        for statement in &self.statements {
+            statement.interpret(scope)?;
+        }
+        // TODO: Body implement a way to return values
+        Ok(Value::Nope)
     }
 }

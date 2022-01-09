@@ -1,13 +1,16 @@
-use super::Block;
-use super::Var;
-use crate::Parseable;
-use anyhow::Error;
-use anyhow::Result;
+use crate::*;
+use anyhow::{Error, Result};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Fun {
     arguments: Vec<Var>,
     body: Block,
+}
+
+impl Callable for Fun {
+    fn get_arguments(&self) -> Vec<Var> {
+        self.arguments.clone()
+    }
 }
 
 impl Parseable for Fun {
@@ -41,5 +44,12 @@ impl Parseable for Fun {
         };
 
         Some(Ok(Fun { arguments, body }))
+    }
+}
+
+impl Interpretable for Fun {
+    fn interpret(&self, scope: &mut Scope) -> Result<Value> {
+        // println!("Interpreting function:\n{:?}", self);
+        self.body.interpret(scope)
     }
 }

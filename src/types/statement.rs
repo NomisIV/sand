@@ -1,10 +1,7 @@
-use super::Assignment;
-use super::Call;
-use crate::Parseable;
-use anyhow::Error;
-use anyhow::Result;
+use crate::*;
+use anyhow::{Error, Result};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Statement {
     Assignment(Assignment),
     Call(Call),
@@ -36,6 +33,16 @@ impl Parseable for Statement {
             return Some(Ok(Statement::Call(call)));
         } else {
             return None;
+        }
+    }
+}
+
+impl Interpretable for Statement {
+    fn interpret(&self, scope: &mut Scope) -> Result<Value> {
+        // println!("== Interpreting statement:\n{:?}", self);
+        match self {
+            Self::Assignment(assignment) => assignment.interpret(scope),
+            Self::Call(call) => call.interpret(scope),
         }
     }
 }
