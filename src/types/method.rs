@@ -45,7 +45,12 @@ impl Interpretable for Met {
             Value::Var(var) => match scope.get(var) {
                 Some(Value::Obj(obj)) => obj.clone(),
                 Some(value) => Obj::from_value(value.clone()),
-                None => return Err(Error::msg(format!("ERROR: Variable `{}` is not in scope", var.get_name())))
+                None => {
+                    return Err(Error::msg(format!(
+                        "ERROR: Variable `{}` is not in scope",
+                        var.get_name()
+                    )))
+                }
             },
             value => Obj::from_value(value.clone()),
         };
@@ -55,7 +60,8 @@ impl Interpretable for Met {
         } else {
             return Err(Error::msg(format!(
                 "ERROR: Object `{:?}` does not have the function `{:?}`",
-                object, self.function.get_name()
+                object,
+                self.function.get_name()
             )));
         }
     }

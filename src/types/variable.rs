@@ -32,6 +32,9 @@ impl Parseable for Var {
 impl Interpretable for Var {
     fn interpret(&self, scope: &mut Scope) -> Result<Value> {
         // println!("Interpreting variable:\n{:?}", self);
-        scope.get(&self).ok_or(Error::msg(format!("Variable `{}` not in scope", self.name))).map(|value| value.clone())
+        scope
+            .get(&self)
+            .ok_or(Error::msg(format!("Variable `{}` not in scope", self.name)))
+            .map(|value| value.clone())
     }
 }

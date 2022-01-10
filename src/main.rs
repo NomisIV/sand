@@ -37,7 +37,7 @@ enum Cmd {
     Run {
         #[structopt(parse(from_os_str))]
         file: PathBuf,
-    }
+    },
 }
 
 #[derive(StructOpt)]
@@ -64,7 +64,7 @@ fn main() {
             } else {
                 eprintln!("ERROR: File is not a block");
             }
-        },
+        }
         Cmd::Run { file } => {
             let file_contents = fs::read_to_string(file).unwrap();
             let parse_result = Block::parse(&file_contents.trim());
@@ -80,6 +80,6 @@ fn main() {
             } else {
                 eprintln!("ERROR: File is not a block");
             }
-        },
+        }
     }
 }

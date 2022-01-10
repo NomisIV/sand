@@ -9,7 +9,10 @@ pub struct Call {
 
 impl Call {
     pub fn new(function: Value, parameters: Vec<Value>) -> Self {
-        Self { function, parameters }
+        Self {
+            function,
+            parameters,
+        }
     }
 }
 
@@ -59,9 +62,14 @@ impl Interpretable for Call {
             Value::Met(method) => match method.interpret(scope) {
                 Ok(Value::Fun(function)) => Box::new(function.clone()),
                 Ok(Value::Intrinsic(intrinsic)) => Box::new(intrinsic.clone()),
-                Ok(value) => return Err(Error::msg(format!("ERROR: Value is not a function:\n{:?}", value))),
+                Ok(value) => {
+                    return Err(Error::msg(format!(
+                        "ERROR: Value is not a function:\n{:?}",
+                        value
+                    )))
+                }
                 Err(err) => return Err(err),
-            }
+            },
             Value::Var(variable) => match scope.get(&variable) {
                 Some(Value::Fun(function)) => Box::new(function.clone()),
                 Some(Value::Intrinsic(intrinsic)) => Box::new(intrinsic.clone()),
