@@ -1,9 +1,10 @@
 use anyhow::Result;
 use std::collections::HashMap;
-use std::env;
 use std::fmt::Write;
 use std::fs;
+use std::path::PathBuf;
 use std::rc::Rc;
+use structopt::StructOpt;
 
 mod objects;
 mod types;
@@ -27,23 +28,58 @@ trait Compileable {
     fn compile(&self, scope: &mut Scope, buffer: impl Write) -> Result<()>;
 }
 
+#[derive(StructOpt)]
+enum Cmd {
+    Parse {
+        #[structopt(parse(from_os_str))]
+        file: PathBuf,
+    },
+    Run {
+        #[structopt(parse(from_os_str))]
+        file: PathBuf,
+    }
+}
+
+#[derive(StructOpt)]
+struct Opt {
+    #[structopt(subcommand)]
+    subcommand: Cmd,
+}
+
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    let file = fs::read_to_string(args.get(1).unwrap()).unwrap();
-    // println!("==== File:\n{}", file);
-    let parse_result = Block::parse(&file.trim());
-    if let Some(Ok(tokens)) = parse_result {
-        // println!("==== Tokens:\n{:#?}", tokens);
+    let opt = Opt::from_args();
 
-        let mut scope: Scope = HashMap::new();
-        scope.insert(Var::new("main"), Value::Obj(main_obj::init()));
+    match opt.subcommand {
+        Cmd::Parse { file } => {
+            let file_contents = fs::read_to_string(file).unwrap();
+            println!("==== File:\n{}", file_contents);
+            let parse_result = Block::parse(&file_contents.trim());
+            if let Some(Ok(tokens)) = parse_result {
+                println!("==== Tokens:\n{:#?}", tokens);
 
-        if let Err(err) = tokens.interpret(&mut scope) {
-            eprintln!("{}", err)
-        }
-    } else if let Some(Err(err)) = parse_result {
-        eprintln!("ERROR: {}", err.to_string());
-    } else {
-        eprintln!("ERROR: File is not a block");
+                let mut scope: Scope = HashMap::new();
+                scope.insert(Var::new("main"), Value::Obj(main_obj::init()));
+            } else if let Some(Err(err)) = parse_result {
+                eprintln!("ERROR: {}", err.to_string());
+            } else {
+                eprintln!("ERROR: File is not a block");
+            }
+        },
+        Cmd::Run { file } => {
+            let file_contents = fs::read_to_string(file).unwrap();
+            let parse_result = Block::parse(&file_contents.trim());
+            if let Some(Ok(tokens)) = parse_result {
+                let mut scope: Scope = HashMap::new();
+                scope.insert(Var::new("main"), Value::Obj(main_obj::init()));
+
+                if let Err(err) = tokens.interpret(&mut scope) {
+                    eprintln!("{}", err)
+                }
+            } else if let Some(Err(err)) = parse_result {
+                eprintln!("ERROR: {}", err.to_string());
+            } else {
+                eprintln!("ERROR: File is not a block");
+            }
+        },
     }
 }
