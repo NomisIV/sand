@@ -1,36 +1,34 @@
 {
-  description = "tim - Terminal Interface eMail Client";
+  description = "sand programming language";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs";
-    naersk.url = "github:nmattia/naersk";
+    nixpkgs.url = github:nixos/nixpkgs;
   };
 
-  outputs = { self, nixpkgs, naersk }: let
-    # The architecture for the build
-    arch = "x86_64-linux";
+  outputs = inputs:
+    with inputs;
+    let
+      systems = [
+        "aarch64-linux"
+        "i686-linux"
+        "x86_64-linux"
+      ];
 
-    # Which package set to use
-    pkgs = nixpkgs.legacyPackages."${arch}";
+      config = system:
+      let
+        pkgs = nixpkgs.legacyPackages.${system};
+        sand = pkgs.rustPlatform.buildRustPackage {
+          name = "sand";
+          version = "0.1.0";
+          src = ./.;
+          cargoSha256 = "sha256-Eu0IdVNj4bFcHimW5xNAW4dyl8iwk2W8cHs+mo3fxp4=";
+        };
+      in {
+        defaultPackage.${system} = sand;
 
-    dependencies = with pkgs; [
-      openssl
-      pkg-config
-    ];
-
-    # The binary program
-    tim = naersk.lib."${arch}".buildPackage {
-      pname = "tim";
-      root = ./.;
-      buildInputs = dependencies;
-      doCheck = true;
-    };
-
-  in {
-    defaultPackage."${arch}" = tim;
-
-    devShell."${arch}" = pkgs.mkShell {
-      buildInputs = with pkgs; [ rustc cargo rustfmt ] ++ dependencies;
-    };
-  };
+        devShell.${system} = pkgs.mkShell {
+          buildInputs = with pkgs; [ rustc cargo rustfmt ];
+        };
+      };
+    in builtins.foldl' (acc: system: acc // (config system)) { } systems;
 }
