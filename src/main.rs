@@ -30,53 +30,46 @@ pub trait Interpretable {
 
 #[derive(StructOpt)]
 enum Cmd {
-    Parse {
-        #[structopt(parse(from_os_str))]
-        file: PathBuf,
-    },
-    Run {
-        #[structopt(parse(from_os_str))]
-        file: PathBuf,
-    },
+    Parse,
+    Run,
 }
 
 #[derive(StructOpt)]
 struct Opt {
     #[structopt(subcommand)]
     subcommand: Cmd,
+
+    #[structopt(parse(from_os_str))]
+    file: PathBuf,
 }
 
 fn main() {
     let opt = Opt::from_args();
 
+    let file_contents = fs::read_to_string(opt.file).unwrap();
+
     match opt.subcommand {
-        Cmd::Parse { file } => {
-            let file_contents = fs::read_to_string(file).unwrap();
+        Cmd::Parse => {
             println!("==== File:\n{}", file_contents);
-            let parse_result = Block::parse(&file_contents.trim());
-            if let Some(Ok(tokens)) = parse_result {
+            let parse_result = Block::from_str(&file_contents.trim());
+            if let Ok(tokens) = parse_result {
                 println!("==== Tokens:\n{:#?}", tokens);
 
                 let mut scope: Scope = HashMap::new();
                 scope.insert(Var::new("main"), Literal::Object(main_obj::init()));
-            } else if let Some(Err(err)) = parse_result {
-                eprintln!("ERROR: {}", err.to_string());
             } else {
                 eprintln!("ERROR: File is not a block");
             }
         }
-        Cmd::Run { file } => {
-            let file_contents = fs::read_to_string(file).unwrap();
-            let parse_result = Block::parse(&file_contents.trim());
-            if let Some(Ok(tokens)) = parse_result {
+        Cmd::Run => {
+            let parse_result = Block::from_str(&file_contents.trim());
+            if let Ok(tokens) = parse_result {
                 let mut scope: Scope = HashMap::new();
                 scope.insert(Var::new("main"), Literal::Object(main_obj::init()));
 
                 if let Err(err) = tokens.interpret(&mut scope) {
                     eprintln!("{}", err)
                 }
-            } else if let Some(Err(err)) = parse_result {
-                eprintln!("ERROR: {}", err.to_string());
             } else {
                 eprintln!("ERROR: File is not a block");
             }
