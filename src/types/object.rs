@@ -38,15 +38,17 @@ impl Object {
     }
 }
 
-impl Parseable for Object {
-    fn parse(string: &str) -> Option<Result<Self>> {
-        println!("== Parsing object:\n{:?}", string);
+impl FromStr for Object {
+    type Err = SandParseError;
+
+    fn from_str(_s: &str) -> Result<Self, Self::Err> {
+        // println!("== Parsing object:\n{:?}", string);
         unimplemented!()
     }
 }
 
 impl Interpretable for Object {
-    fn interpret(&self, scope: &mut Scope) -> Result<Literal> {
+    fn interpret(&self, scope: &mut Scope) -> Result<Literal, SandInterpretingError> {
         for (var, value) in self.members.iter() {
             scope.insert(var.clone(), value.clone());
         }

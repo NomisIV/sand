@@ -1,5 +1,4 @@
 use crate::*;
-use anyhow::{Error, Result};
 
 #[derive(Debug, Clone)]
 pub struct Call {
@@ -16,51 +15,40 @@ impl Call {
     }
 }
 
-impl Parseable for Call {
-    fn parse(string: &str) -> Option<Result<Self>> {
+impl FromStr for Call {
+    type Err = SandParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         // println!("== Parsing call:\n{:?}", string);
-        let (before, after) = string.split_once('(')?;
-        let callable = match Value::parse(before.trim()) {
-            Some(Ok(function)) => function,
-            Some(Err(err)) => return Some(Err(err)),
-            None => {
-                // return Some(Err(Error::msg(format!(
-                //     "ERROR: Cannot parse the following function:\n{}",
-                //     before.trim()
-                // ))))
-                return None;
-            }
-        };
+        let (before, after) = s
+            .split_once('(')
+            .ok_or(SandParseError::Unidentifiable(s.into(), "call".into()))?;
+        let callable = Value::from_str(before.trim())?;
         let mut parameters = Vec::new();
-        for parameter_str in after.trim().strip_suffix(')')?.split(',') {
-            match Value::parse(parameter_str) {
-                Some(Ok(parameter)) => parameters.push(parameter),
-                Some(Err(err)) => return Some(Err(err)),
-                None => {
-                    // return Some(Err(Error::msg(format!(
-                    //     "ERROR: Cannot parse the following value:\n{}",
-                    //     parameter_str
-                    // ))))
-                    return None;
-                }
-            };
+        for parameter_str in after
+            .trim()
+            .strip_suffix(')')
+            .ok_or(SandParseError::Unidentifiable(s.into(), "call".into()))?
+            .split(',')
+        {
+            parameters.push(Value::from_str(parameter_str)?);
         }
 
-        Some(Ok(Call {
+        Ok(Call {
             callable,
             parameters,
-        }))
+        })
     }
 }
 
 impl Interpretable for Call {
-    fn interpret(&self, scope: &mut Scope) -> Result<Literal> {
+    fn interpret(&self, scope: &mut Scope) -> Result<Literal, SandInterpretingError> {
         // println!("== Interpreting call:\n{:?}", self);
         let function = &self.callable.interpret(scope)?.as_callable()?;
         let arguments = function.get_arguments();
 
         if arguments.len() != self.parameters.len() {
-            return Err(Error::msg("ERROR: Mismatched number of parameters"));
+            return Err(SandInterpretingError::MismatchedParameters);
         }
         // println!("#### Arguments:\n{:#?}", arguments);
 

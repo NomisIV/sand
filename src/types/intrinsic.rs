@@ -33,7 +33,7 @@ impl Intrinsic {
 }
 
 impl Interpretable for Intrinsic {
-    fn interpret(&self, scope: &mut Scope) -> Result<Literal> {
+    fn interpret(&self, scope: &mut Scope) -> Result<Literal, SandInterpretingError> {
         // println!("== Interpreting intrinsic:\n{:?}", self);
         let function = self.function.deref();
         Ok(function(scope))

@@ -1,5 +1,4 @@
 use crate::*;
-use anyhow::Result;
 
 // TODO: Implement this as a trait instead
 #[derive(Debug, Clone)]
@@ -21,16 +20,18 @@ impl Callable {
     }
 }
 
-impl Parseable for Callable {
-    fn parse(string: &str) -> Option<Result<Self>> {
+impl FromStr for Callable {
+    type Err = SandParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         // println!("== Parsing callable:\n{:?}", string);
-        Function::parse(string)
-            .map(|function_result| function_result.map(|function| Callable::Function(function)))
+        Err(SandParseError::Unidentifiable)
+            .or(Function::from_str(s).map(|function| Callable::Function(function)))
     }
 }
 
 impl Interpretable for Callable {
-    fn interpret(&self, scope: &mut Scope) -> Result<Literal> {
+    fn interpret(&self, scope: &mut Scope) -> Result<Literal, SandInterpretingError> {
         match self {
             Callable::Function(function) => function.interpret(scope),
             Callable::Intrinsic(intrinsic) => intrinsic.interpret(scope),

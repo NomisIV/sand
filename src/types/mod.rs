@@ -11,9 +11,9 @@ pub mod member;
 pub mod object;
 pub mod statement;
 // pub mod string;
+pub mod r#type;
 pub mod value;
 pub mod variable;
-pub mod r#type;
 
 pub use assignment::Assignment;
 pub use block::Block;
@@ -28,6 +28,6 @@ pub use member::Member;
 pub use object::Object;
 pub use statement::Statement;
 // pub use string::Str;
+pub use r#type::Type;
 pub use value::Value;
 pub use variable::Var;
-pub use r#type::Type;

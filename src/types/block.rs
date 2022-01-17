@@ -1,22 +1,23 @@
 use crate::*;
-use anyhow::Result;
 
 #[derive(Debug, Clone)]
 pub struct Block {
     statements: Vec<Statement>,
 }
 
-impl Parseable for Block {
-    fn parse(string: &str) -> Option<Result<Self>> {
+impl FromStr for Block {
+    type Err = SandParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         // println!("== Parsing block:\n{:?}", string);
-        if !string.starts_with('{') || !string.ends_with('}') {
-            return None;
+        if !s.starts_with('{') || !s.ends_with('}') {
+            return Err(SandParseError::Unidentifiable(s.into(), "block".into()));
         }
 
         let mut curly_lvl: usize = 0;
         let mut statements = Vec::new();
         let mut line = String::new();
-        let chars = string
+        let chars = s
             .strip_prefix("{")
             .unwrap()
             .strip_suffix("}")
@@ -28,18 +29,8 @@ impl Parseable for Block {
             match char {
                 ';' => {
                     if curly_lvl == 0 {
-                        let statement =
-                            match Statement::parse(line.trim().strip_suffix(';').unwrap()) {
-                                Some(Ok(statement)) => statement,
-                                Some(Err(err)) => return Some(Err(err)),
-                                None => {
-                                    // return Some(Err(Error::msg(format!(
-                                    //     "ERROR: Cannot parse the following statement:\n{}",
-                                    //     line.trim()
-                                    // ))))
-                                    return None;
-                                }
-                            };
+                        let statement_str = line.trim().strip_suffix(';').unwrap();
+                        let statement = Statement::from_str(statement_str)?;
                         statements.push(statement);
                         line = String::new();
                     }
@@ -50,12 +41,12 @@ impl Parseable for Block {
             }
         }
 
-        Some(Ok(Self { statements }))
+        Ok(Self { statements })
     }
 }
 
 impl Interpretable for Block {
-    fn interpret(&self, scope: &mut Scope) -> Result<Literal> {
+    fn interpret(&self, scope: &mut Scope) -> Result<Literal, SandInterpretingError> {
         // println!("== Interpreting block:\n{:?}", self);
         for statement in &self.statements {
             statement.interpret(scope)?;

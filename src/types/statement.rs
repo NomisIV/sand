@@ -1,5 +1,4 @@
 use crate::*;
-use anyhow::{Error, Result};
 
 #[derive(Debug, Clone)]
 pub enum Statement {
@@ -7,39 +6,19 @@ pub enum Statement {
     Call(Call),
 }
 
-impl Parseable for Statement {
-    fn parse(string: &str) -> Option<Result<Self>> {
+impl FromStr for Statement {
+    type Err = SandParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         // println!("== Parsing statement:\n{:?}", string);
-        if let Some(assignment_result) = Assignment::parse(string) {
-            let assignment = match assignment_result {
-                Ok(assignment) => assignment,
-                Err(err) => {
-                    return Some(Err(Error::msg(format!(
-                        "ERROR: Cannot parse the following assignment:\n{}\nbecause of:\n{}",
-                        string, err
-                    ))))
-                }
-            };
-            return Some(Ok(Statement::Assignment(assignment)));
-        } else if let Some(call_result) = Call::parse(string) {
-            let call = match call_result {
-                Ok(call) => call,
-                Err(err) => {
-                    return Some(Err(Error::msg(format!(
-                        "ERROR: Cannot parse the following call:\n{}\nbecause of:\n{}",
-                        string, err
-                    ))))
-                }
-            };
-            return Some(Ok(Statement::Call(call)));
-        } else {
-            return None;
-        }
+        Assignment::from_str(s)
+            .map(|assignment| Statement::Assignment(assignment))
+            .or(Call::from_str(s).map(|call| Statement::Call(call)))
     }
 }
 
 impl Interpretable for Statement {
-    fn interpret(&self, scope: &mut Scope) -> Result<Literal> {
+    fn interpret(&self, scope: &mut Scope) -> Result<Literal, SandInterpretingError> {
         // println!("== Interpreting statement:\n{:?}", self);
         match self {
             Self::Assignment(assignment) => assignment.interpret(scope),

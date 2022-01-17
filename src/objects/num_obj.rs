@@ -20,6 +20,9 @@ pub fn init(number: isize) -> Object {
     );
     let mut num = Object::new();
     num.add_member(Var::new("self"), Literal::Number(number));
-    num.add_member(Var::new("times"), Literal::Callable(Callable::Intrinsic(times)));
+    num.add_member(
+        Var::new("times"),
+        Literal::Callable(Callable::Intrinsic(times)),
+    );
     num
 }
