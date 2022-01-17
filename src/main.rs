@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::fs;
+use std::io;
 use std::path::PathBuf;
 use std::str::FromStr;
 use structopt::StructOpt;
@@ -43,6 +44,8 @@ pub enum SandInterpretingError {
     MismatchedParameters,
     NoMember,
     BadValue,
+    UseRead(io::Error),
+    UseParse(SandParseError),
 }
 
 impl fmt::Display for SandInterpretingError {
@@ -52,6 +55,8 @@ impl fmt::Display for SandInterpretingError {
             Self::MismatchedParameters => write!(f, "Mismatched parameters"),
             Self::NoMember => write!(f, "Object has no such member"),
             Self::BadValue => write!(f, "The value is of the wrong type"),
+            Self::UseRead(err) => write!(f, "Cannot read file: {}", err),
+            Self::UseParse(err) => write!(f, "While parsing an included file: {}", err),
         }
     }
 }

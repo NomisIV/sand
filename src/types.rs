@@ -1,5 +1,5 @@
 use crate::{objects::*, Interpretable, SandInterpretingError, SandParseError, Scope};
-use std::{collections::HashMap, fmt, rc::Rc, str::FromStr};
+use std::{collections::HashMap, fmt, rc::Rc, str::FromStr, fs};
 
 /* ======== ASSIGNMENT ======== */
 #[derive(Debug, Clone)]
@@ -474,6 +474,7 @@ impl Interpretable for Object {
 pub enum Statement {
     Assignment(Assignment),
     Value(Value),
+    Use(Use),
 }
 
 impl FromStr for Statement {
@@ -484,6 +485,7 @@ impl FromStr for Statement {
         Assignment::from_str(s)
             .map(|assignment| Statement::Assignment(assignment))
             .or(Value::from_str(s).map(|value| Statement::Value(value)))
+            .or(Use::from_str(s).map(|r#use| Statement::Use(r#use)))
     }
 }
 
@@ -493,7 +495,39 @@ impl Interpretable for Statement {
         match self {
             Self::Assignment(assignment) => assignment.interpret(scope),
             Self::Value(call) => call.interpret(scope),
+            Self::Use(r#use) => r#use.interpret(scope),
         }
+    }
+}
+
+/* ======== USE ======== */
+#[derive(Debug, Clone)]
+pub struct Use {
+    file: String,
+}
+
+impl FromStr for Use {
+    type Err = SandParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if !s.starts_with("use ") {
+            return Err(SandParseError::Unidentifiable(s.into(), "use".into()));
+        }
+
+        // TODO: Make file path relative to the current file instead of the execution root path
+        let file = s.strip_prefix("use ").unwrap().to_string();
+        Ok(Use { file })
+    }
+}
+
+impl Interpretable for Use {
+    fn interpret(&self, scope: &mut Scope) -> Result<Literal, SandInterpretingError> {
+        let file_contents = fs::read_to_string(&self.file)
+            .map_err(|err| SandInterpretingError::UseRead(err))?;
+        let tree = Block::from_str(file_contents.trim())
+            .map_err(|err| SandInterpretingError::UseParse(err))?;
+        // TODO: Wrap this to make it more apparent where the error is from
+        tree.interpret(scope)
     }
 }
 
