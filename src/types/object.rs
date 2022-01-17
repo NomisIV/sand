@@ -1,53 +1,55 @@
 use crate::*;
 
+// TODO: Objects are basically just sets, so rename objects to sets instead
 #[derive(Debug, Clone)]
-pub struct Obj {
-    selff: Box<Value>,
-    members: HashMap<Var, Value>,
+pub struct Object {
+    members: HashMap<Var, Literal>,
 }
 
-impl Obj {
-    pub fn new(value: Value) -> Self {
+impl Object {
+    pub fn new() -> Self {
         Self {
-            selff: Box::new(value),
             members: HashMap::new(),
         }
     }
 
-    pub fn from_value(value: Value) -> Self {
-        match value {
-            Value::Num(num) => num_obj::init(num),
-            Value::Obj(obj) => obj,
-            value => Obj::new(value),
+    pub fn from_literal(literal: Literal) -> Self {
+        match literal {
+            // Literal::Nope => (),
+            // Literal::String(string) => (),
+            Literal::Number(number) => num_obj::init(number),
+            // Literal::Boolean(bool) => (),
+            // Literal::Callable(callable) => (),
+            Literal::Object(object) => object,
+            _ => {
+                let mut object = Object::new();
+                object.add_member(Var::new("self"), literal);
+                object
+            }
         }
     }
 
-    pub fn add_member(&mut self, name: Var, value: Value) {
+    pub fn add_member(&mut self, name: Var, value: Literal) {
         self.members.insert(name, value);
     }
 
-    pub fn get_member(&self, name: &Var) -> Option<&Value> {
+    pub fn get_member(&self, name: &Var) -> Option<&Literal> {
         self.members.get(name)
     }
 }
 
-impl Parseable for Obj {
+impl Parseable for Object {
     fn parse(string: &str) -> Option<Result<Self>> {
-        let selff = match Value::parse(string) {
-            Some(Ok(selff)) => selff,
-            Some(Err(err)) => return Some(Err(err)),
-            None => return None,
-        };
-        let selff = Box::new(selff);
-        let members = HashMap::new();
-        Some(Ok(Obj { selff, members }))
+        println!("== Parsing object:\n{:?}", string);
+        unimplemented!()
     }
 }
 
-impl Interpretable for Obj {
-    fn interpret(&self, scope: &mut Scope) -> Result<Value> {
-        // println!("== Interpreting object:\n{:?}", self);
-        scope.insert(Var::new("self"), *self.selff.clone());
-        Ok(Value::Nope)
+impl Interpretable for Object {
+    fn interpret(&self, scope: &mut Scope) -> Result<Literal> {
+        for (var, value) in self.members.iter() {
+            scope.insert(var.clone(), value.clone());
+        }
+        Ok(Literal::Object(self.clone()))
     }
 }

@@ -1,5 +1,5 @@
 use crate::*;
-use anyhow::{Error, Result};
+use anyhow::Result;
 
 #[derive(Debug, Clone)]
 pub struct Block {
@@ -8,6 +8,7 @@ pub struct Block {
 
 impl Parseable for Block {
     fn parse(string: &str) -> Option<Result<Self>> {
+        // println!("== Parsing block:\n{:?}", string);
         if !string.starts_with('{') || !string.ends_with('}') {
             return None;
         }
@@ -32,10 +33,11 @@ impl Parseable for Block {
                                 Some(Ok(statement)) => statement,
                                 Some(Err(err)) => return Some(Err(err)),
                                 None => {
-                                    return Some(Err(Error::msg(format!(
-                                        "ERROR: Cannot parse the following statement:\n{}",
-                                        line.trim()
-                                    ))))
+                                    // return Some(Err(Error::msg(format!(
+                                    //     "ERROR: Cannot parse the following statement:\n{}",
+                                    //     line.trim()
+                                    // ))))
+                                    return None;
                                 }
                             };
                         statements.push(statement);
@@ -53,12 +55,12 @@ impl Parseable for Block {
 }
 
 impl Interpretable for Block {
-    fn interpret(&self, scope: &mut Scope) -> Result<Value> {
+    fn interpret(&self, scope: &mut Scope) -> Result<Literal> {
         // println!("== Interpreting block:\n{:?}", self);
         for statement in &self.statements {
             statement.interpret(scope)?;
         }
         // TODO: Body implement a way to return values
-        Ok(Value::Nope)
+        Ok(Literal::Nope)
     }
 }

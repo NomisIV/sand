@@ -9,6 +9,7 @@ pub enum Statement {
 
 impl Parseable for Statement {
     fn parse(string: &str) -> Option<Result<Self>> {
+        // println!("== Parsing statement:\n{:?}", string);
         if let Some(assignment_result) = Assignment::parse(string) {
             let assignment = match assignment_result {
                 Ok(assignment) => assignment,
@@ -38,7 +39,7 @@ impl Parseable for Statement {
 }
 
 impl Interpretable for Statement {
-    fn interpret(&self, scope: &mut Scope) -> Result<Value> {
+    fn interpret(&self, scope: &mut Scope) -> Result<Literal> {
         // println!("== Interpreting statement:\n{:?}", self);
         match self {
             Self::Assignment(assignment) => assignment.interpret(scope),

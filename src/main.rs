@@ -1,6 +1,5 @@
 use anyhow::Result;
 use std::collections::HashMap;
-use std::fmt::Write;
 use std::fs;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -12,21 +11,22 @@ mod types;
 use objects::*;
 use types::*;
 
+// TODO: Use FromStr instead
 trait Parseable {
     fn parse(string: &str) -> Option<Result<Self>>
     where
         Self: Sized;
 }
 
-type Scope = HashMap<Var, Value>;
+type Scope = HashMap<Var, Literal>;
 
 pub trait Interpretable {
-    fn interpret(&self, scope: &mut Scope) -> Result<Value>;
+    fn interpret(&self, scope: &mut Scope) -> Result<Literal>;
 }
 
-trait Compileable {
-    fn compile(&self, scope: &mut Scope, buffer: impl Write) -> Result<()>;
-}
+// trait Compileable {
+//     fn compile(&self, scope: &mut Scope, buffer: impl Write) -> Result<()>;
+// }
 
 #[derive(StructOpt)]
 enum Cmd {
@@ -58,7 +58,7 @@ fn main() {
                 println!("==== Tokens:\n{:#?}", tokens);
 
                 let mut scope: Scope = HashMap::new();
-                scope.insert(Var::new("main"), Value::Obj(main_obj::init()));
+                scope.insert(Var::new("main"), Literal::Object(main_obj::init()));
             } else if let Some(Err(err)) = parse_result {
                 eprintln!("ERROR: {}", err.to_string());
             } else {
@@ -70,7 +70,7 @@ fn main() {
             let parse_result = Block::parse(&file_contents.trim());
             if let Some(Ok(tokens)) = parse_result {
                 let mut scope: Scope = HashMap::new();
-                scope.insert(Var::new("main"), Value::Obj(main_obj::init()));
+                scope.insert(Var::new("main"), Literal::Object(main_obj::init()));
 
                 if let Err(err) = tokens.interpret(&mut scope) {
                     eprintln!("{}", err)

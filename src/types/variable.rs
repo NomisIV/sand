@@ -20,6 +20,7 @@ impl Var {
 
 impl Parseable for Var {
     fn parse(string: &str) -> Option<Result<Self>> {
+        // println!("== Parsing variable:\n{:?}", string);
         let allowed_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVXYZ123456789_-";
         if let Some(_) = string.chars().find(|char| !allowed_chars.contains(*char)) {
             return None;
@@ -30,7 +31,7 @@ impl Parseable for Var {
 }
 
 impl Interpretable for Var {
-    fn interpret(&self, scope: &mut Scope) -> Result<Value> {
+    fn interpret(&self, scope: &mut Scope) -> Result<Literal> {
         // println!("Interpreting variable:\n{:?}", self);
         scope
             .get(&self)

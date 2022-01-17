@@ -7,7 +7,7 @@ use crate::*;
 #[derive(Clone)]
 pub struct Intrinsic {
     arguments: Vec<Var>,
-    function: Rc<dyn Fn(&mut Scope) -> Value>,
+    function: Rc<dyn Fn(&mut Scope) -> Literal>,
 }
 
 impl Debug for Intrinsic {
@@ -20,22 +20,20 @@ impl Debug for Intrinsic {
 }
 
 impl Intrinsic {
-    pub fn new(arguments: Vec<Var>, function: Rc<dyn Fn(&mut Scope) -> Value>) -> Self {
+    pub fn new(arguments: Vec<Var>, function: Rc<dyn Fn(&mut Scope) -> Literal>) -> Self {
         Self {
             arguments,
             function,
         }
     }
-}
 
-impl Callable for Intrinsic {
-    fn get_arguments(&self) -> Vec<Var> {
+    pub fn get_arguments(&self) -> Vec<Var> {
         self.arguments.clone()
     }
 }
 
 impl Interpretable for Intrinsic {
-    fn interpret(&self, scope: &mut Scope) -> Result<Value> {
+    fn interpret(&self, scope: &mut Scope) -> Result<Literal> {
         // println!("== Interpreting intrinsic:\n{:?}", self);
         let function = self.function.deref();
         Ok(function(scope))

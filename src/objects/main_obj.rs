@@ -1,23 +1,20 @@
 use crate::*;
 
-pub fn init() -> Obj {
+pub fn init() -> Object {
     let print = Intrinsic::new(
         vec![Var::new("value")],
         Rc::new(|scope: &mut Scope| {
             match scope.get(&Var::new("value")).unwrap() {
-                Value::Str(string) => println!("{}", string),
-                Value::Num(number) => println!("{}", number),
-                Value::Var(variable) => match scope.get(variable).unwrap() {
-                    Value::Str(string) => println!("{}", string),
-                    Value::Num(number) => println!("{}", number),
-                    value => eprintln!("{:?} cannot be printed", value),
-                },
-                value => eprintln!("{:?} cannot be printed", value),
+                Literal::String(string) => println!("{}", string),
+                Literal::Number(number) => println!("{}", number),
+                Literal::Boolean(boolean) => println!("{}", boolean),
+                Literal::Nope => println!("Nope"),
+                _ => eprintln!("Cannot print literal")
             }
-            Value::Nope
+            Literal::Nope
         }),
     );
-    let mut main = Obj::new(Value::Nope);
-    main.add_member(Var::new("print"), Value::Intrinsic(print));
+    let mut main = Object::new();
+    main.add_member(Var::new("print"), Literal::Callable(Callable::Intrinsic(print)));
     main
 }
