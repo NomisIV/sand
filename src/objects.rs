@@ -1,6 +1,35 @@
-use crate::*;
+use crate::{
+    types::*,
+    Scope,
+    Interpretable,
+};
+use std::{
+    rc::Rc
+};
 
-pub fn init(number: isize) -> Object {
+pub fn init_main_obj() -> Object {
+    let print = Intrinsic::new(
+        vec![Var::new("value")],
+        Rc::new(|scope: &mut Scope| {
+            match scope.get(&Var::new("value")).unwrap() {
+                Literal::String(string) => println!("{}", string),
+                Literal::Number(number) => println!("{}", number),
+                Literal::Boolean(boolean) => println!("{}", boolean),
+                Literal::Nope => println!("Nope"),
+                _ => eprintln!("Cannot print literal"),
+            }
+            Literal::Nope
+        }),
+    );
+    let mut main = Object::new();
+    main.add_member(
+        Var::new("print"),
+        Literal::Callable(Callable::Intrinsic(print)),
+    );
+    main
+}
+
+pub fn init_num_obj(number: isize) -> Object {
     let times = Intrinsic::new(
         vec![Var::new("f")],
         Rc::new(|scope: &mut Scope| {

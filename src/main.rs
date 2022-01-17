@@ -2,14 +2,13 @@ use std::collections::HashMap;
 use std::fmt;
 use std::fs;
 use std::path::PathBuf;
-use std::rc::Rc;
 use std::str::FromStr;
 use structopt::StructOpt;
 
 mod objects;
 mod types;
 
-use objects::*;
+use objects::init_main_obj;
 use types::*;
 
 // TODO: Add locations for all tokens, and include them in the error
@@ -97,7 +96,7 @@ fn main() {
         Cmd::Run => match Block::from_str(&file_contents.trim()) {
             Ok(tree) => {
                 let mut scope: Scope = HashMap::new();
-                scope.insert(Var::new("main"), Literal::Object(main_obj::init()));
+                scope.insert(Var::new("main"), Literal::Object(init_main_obj()));
 
                 match tree.interpret(&mut scope) {
                     Ok(_) => (),
