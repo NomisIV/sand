@@ -53,6 +53,54 @@ pub fn init_num_obj(number: isize) -> Object {
     );
 
     num.add_member(
+        Var::new("add"),
+        Literal::Callable(Callable::Intrinsic(Intrinsic::new(
+            vec![Var::new("n")],
+            Rc::new(|scope: &mut Scope| {
+                let selff = scope.get(&Var::new("self")).unwrap().as_number().unwrap();
+                let n = scope.get(&Var::new("n")).unwrap().as_number().unwrap();
+                Literal::Number(selff + n)
+            }),
+        ))),
+    );
+
+    num.add_member(
+        Var::new("sub"),
+        Literal::Callable(Callable::Intrinsic(Intrinsic::new(
+            vec![Var::new("n")],
+            Rc::new(|scope: &mut Scope| {
+                let selff = scope.get(&Var::new("self")).unwrap().as_number().unwrap();
+                let n = scope.get(&Var::new("n")).unwrap().as_number().unwrap();
+                Literal::Number(selff - n)
+            }),
+        ))),
+    );
+
+    num.add_member(
+        Var::new("mul"),
+        Literal::Callable(Callable::Intrinsic(Intrinsic::new(
+            vec![Var::new("n")],
+            Rc::new(|scope: &mut Scope| {
+                let selff = scope.get(&Var::new("self")).unwrap().as_number().unwrap();
+                let n = scope.get(&Var::new("n")).unwrap().as_number().unwrap();
+                Literal::Number(selff * n)
+            }),
+        ))),
+    );
+
+    num.add_member(
+        Var::new("mul"),
+        Literal::Callable(Callable::Intrinsic(Intrinsic::new(
+            vec![Var::new("n")],
+            Rc::new(|scope: &mut Scope| {
+                let selff = scope.get(&Var::new("self")).unwrap().as_number().unwrap();
+                let n = scope.get(&Var::new("n")).unwrap().as_number().unwrap();
+                Literal::Number(selff / n)
+            }),
+        ))),
+    );
+
+    num.add_member(
         Var::new("pow"),
         Literal::Callable(Callable::Intrinsic(Intrinsic::new(
             vec![Var::new("n")],
