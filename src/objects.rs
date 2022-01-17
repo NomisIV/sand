@@ -47,11 +47,23 @@ pub fn init_num_obj(number: isize) -> Object {
             selff.clone()
         }),
     );
+    let pow = Intrinsic::new(
+        vec![Var::new("n")],
+        Rc::new(|scope: &mut Scope| {
+            let selff = scope.get(&Var::new("self")).unwrap().as_number().unwrap();
+            let n = scope.get(&Var::new("n")).unwrap().as_number().unwrap();
+            Literal::Number(selff.pow(n as u32))
+        })
+    );
     let mut num = Object::new();
     num.add_member(Var::new("self"), Literal::Number(number));
     num.add_member(
         Var::new("times"),
         Literal::Callable(Callable::Intrinsic(times)),
+    );
+    num.add_member(
+        Var::new("pow"),
+        Literal::Callable(Callable::Intrinsic(pow)),
     );
     num
 }
