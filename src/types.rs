@@ -113,14 +113,14 @@ impl Interpretable for Block {
 /* ======== CALL ======== */
 #[derive(Debug, Clone)]
 pub struct Call {
-    callable: Value,
+    callable: Box<Value>,
     parameters: Vec<Value>,
 }
 
 impl Call {
     pub fn new(callable: Value, parameters: Vec<Value>) -> Self {
         Self {
-            callable,
+            callable: Box::new(callable),
             parameters,
         }
     }
@@ -134,7 +134,7 @@ impl FromStr for Call {
         let (before, after) = s
             .split_once('(')
             .ok_or(SandParseError::Unidentifiable(s.into(), "call".into()))?;
-        let callable = Value::from_str(before.trim())?;
+        let callable = Box::new(Value::from_str(before.trim())?);
         let mut parameters = Vec::new();
         for parameter_str in after
             .trim()
@@ -487,7 +487,7 @@ impl Interpretable for Object {
 #[derive(Debug, Clone)]
 pub enum Statement {
     Assignment(Assignment),
-    Call(Call),
+    Value(Value),
 }
 
 impl FromStr for Statement {
@@ -497,7 +497,7 @@ impl FromStr for Statement {
         // println!("== Parsing statement:\n{:?}", string);
         Assignment::from_str(s)
             .map(|assignment| Statement::Assignment(assignment))
-            .or(Call::from_str(s).map(|call| Statement::Call(call)))
+            .or(Value::from_str(s).map(|value| Statement::Value(value)))
     }
 }
 
@@ -506,7 +506,7 @@ impl Interpretable for Statement {
         // println!("== Interpreting statement:\n{:?}", self);
         match self {
             Self::Assignment(assignment) => assignment.interpret(scope),
-            Self::Call(call) => call.interpret(scope),
+            Self::Value(call) => call.interpret(scope),
         }
     }
 }
@@ -528,6 +528,7 @@ pub enum Value {
     Literal(Literal),
     Variable(Var),
     Member(Member),
+    Call(Call),
 }
 
 impl Value {}
@@ -541,6 +542,7 @@ impl FromStr for Value {
             .map(|literal| Value::Literal(literal))
             .or(Var::from_str(s).map(|var| Value::Variable(var)))
             .or(Member::from_str(s).map(|member| Value::Member(member)))
+            .or(Call::from_str(s).map(|call| Value::Call(call)))
             // .map_err(|err| match err {
             //     SandParseError::ParseErr(msg) => SandParseError::ParseErr(format!(
             //         "Cannot parse the following string into a value:\n{}\nbecause of:\n{}",
@@ -557,6 +559,7 @@ impl Interpretable for Value {
             Value::Literal(literal) => Ok(literal.clone()),
             Value::Variable(variable) => variable.interpret(scope),
             Value::Member(member) => member.interpret(scope),
+            Value::Call(call) => call.interpret(scope),
         }
     }
 }
