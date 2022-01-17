@@ -131,15 +131,18 @@ impl FromStr for Call {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         // println!("== Parsing call:\n{:?}", string);
+        if !(s.contains('(') && s.ends_with(')')) {
+            return Err(SandParseError::Unidentifiable(s.into(), "call".into()));
+        }
         let (before, after) = s
             .split_once('(')
-            .ok_or(SandParseError::Unidentifiable(s.into(), "call".into()))?;
+            .unwrap();
         let callable = Box::new(Value::from_str(before.trim())?);
         let mut parameters = Vec::new();
         for parameter_str in after
             .trim()
             .strip_suffix(')')
-            .ok_or(SandParseError::Unidentifiable(s.into(), "call".into()))?
+            .unwrap()
             .split(',')
         {
             parameters.push(Value::from_str(parameter_str)?);
