@@ -7,6 +7,7 @@ use std::{
     rc::Rc
 };
 
+/* ======== MAIN ======== */
 pub fn init_main_obj() -> Object {
     let print = Intrinsic::new(
         vec![Var::new("value")],
@@ -29,6 +30,7 @@ pub fn init_main_obj() -> Object {
     main
 }
 
+/* ======== NUMBER ======== */
 pub fn init_num_obj(number: isize) -> Object {
     let times = Intrinsic::new(
         vec![Var::new("f")],
