@@ -514,17 +514,6 @@ impl Interpretable for Statement {
     }
 }
 
-/* ======== TYPE ======== */
-#[derive(Debug, Clone)]
-pub enum Type {
-    Nope,
-    String,
-    Number,
-    Boolean,
-    Function,
-    Object,
-}
-
 /* ======== VALUE ======== */
 #[derive(Debug, Clone)]
 pub enum Value {
