@@ -11,7 +11,12 @@ mod types;
 use objects::init_main_obj;
 use types::*;
 
-// TODO: Add locations for all tokens, and include them in the error
+// TODO: Implement a tokenizer which includes token locations for each token (useful for debugging)
+// TODO: Implement the compiler
+// TODO: Implement better errors
+// TODO: Implement typechecking
+// TODO: Implement a language server
+
 #[derive(Debug)]
 pub enum SandParseError {
     ParseErr(String),
