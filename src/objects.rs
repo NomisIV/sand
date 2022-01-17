@@ -33,18 +33,14 @@ pub fn init_num_obj(number: isize) -> Object {
     let times = Intrinsic::new(
         vec![Var::new("f")],
         Rc::new(|scope: &mut Scope| {
-            let selff = scope.get(&Var::new("self")).unwrap();
-            if let Literal::Number(num) = selff {
-                for n in 0..*num {
-                    let f = scope.get(&Var::new("f")).unwrap().as_callable().unwrap();
-                    let f = Value::Literal(Literal::Callable(f));
-                    let call = Call::new(f.clone(), vec![Value::Literal(Literal::Number(n))]);
-                    call.interpret(&mut scope.clone()).unwrap(); // TODO: handle unwrap
-                }
-            } else {
-                unreachable!()
+            let selff = scope.get(&Var::new("self")).unwrap().as_number().unwrap();
+            for n in 0..selff {
+                let f = scope.get(&Var::new("f")).unwrap().as_callable().unwrap();
+                let f = Value::Literal(Literal::Callable(f));
+                let call = Call::new(f.clone(), vec![Value::Literal(Literal::Number(n))]);
+                call.interpret(&mut scope.clone()).unwrap(); // TODO: handle unwrap
             }
-            selff.clone()
+            Literal::Nope
         }),
     );
     let pow = Intrinsic::new(
