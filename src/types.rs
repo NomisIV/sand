@@ -1,16 +1,5 @@
-use crate::{
-    SandParseError,
-    SandInterpretingError,
-    Interpretable,
-    Scope,
-    objects::*,
-};
-use std::{
-    collections::HashMap,
-    str::FromStr,
-    fmt,
-    rc::Rc,
-};
+use crate::{objects::*, Interpretable, SandInterpretingError, SandParseError, Scope};
+use std::{collections::HashMap, fmt, rc::Rc, str::FromStr};
 
 /* ======== ASSIGNMENT ======== */
 #[derive(Debug, Clone)]
@@ -130,21 +119,14 @@ impl FromStr for Call {
     type Err = SandParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        // println!("== Parsing call:\n{:?}", string);
+        // println!("\n== Parsing call:\n{:?}", s);
         if !(s.contains('(') && s.ends_with(')')) {
             return Err(SandParseError::Unidentifiable(s.into(), "call".into()));
         }
-        let (before, after) = s
-            .split_once('(')
-            .unwrap();
+        let (before, after) = s.split_once('(').unwrap();
         let callable = Box::new(Value::from_str(before.trim())?);
         let mut parameters = Vec::new();
-        for parameter_str in after
-            .trim()
-            .strip_suffix(')')
-            .unwrap()
-            .split(',')
-        {
+        for parameter_str in after.trim().strip_suffix(')').unwrap().split(',') {
             parameters.push(Value::from_str(parameter_str)?);
         }
 
@@ -385,11 +367,11 @@ impl FromStr for Literal {
             .or(Literal::parse_number(s))
             .or(Literal::parse_bool(s))
             .or(Callable::from_str(s).map(|callable| Literal::Callable(callable)))
-            // .or(Object::from_str(s).map(|object| Literal::Object(object)))
-            // .or(Err(SandParseError::Unidentifiable(
-            //     s.into(),
-            //     "literal".into(),
-            // )))
+        // .or(Object::from_str(s).map(|object| Literal::Object(object)))
+        // .or(Err(SandParseError::Unidentifiable(
+        //     s.into(),
+        //     "literal".into(),
+        // )))
     }
 }
 
@@ -529,19 +511,19 @@ impl FromStr for Value {
     type Err = SandParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        // println!("== Parsing value:\n{:?}", string);
+        // println!("\n== Parsing value:\n{:?}", s);
         Literal::from_str(s)
             .map(|literal| Value::Literal(literal))
             .or(Var::from_str(s).map(|var| Value::Variable(var)))
             .or(Member::from_str(s).map(|member| Value::Member(member)))
             .or(Call::from_str(s).map(|call| Value::Call(call)))
-            // .map_err(|err| match err {
-            //     SandParseError::ParseErr(msg) => SandParseError::ParseErr(format!(
-            //         "Cannot parse the following string into a value:\n{}\nbecause of:\n{}",
-            //         s, msg
-            //     )),
-            //     SandParseError::Unidentifiable(_, _) => err,
-            // })
+        // .map_err(|err| match err {
+        //     SandParseError::ParseErr(msg) => SandParseError::ParseErr(format!(
+        //         "Cannot parse the following string into a value:\n{}\nbecause of:\n{}",
+        //         s, msg
+        //     )),
+        //     SandParseError::Unidentifiable(_, _) => err,
+        // })
     }
 }
 

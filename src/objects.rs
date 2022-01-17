@@ -1,11 +1,5 @@
-use crate::{
-    types::*,
-    Scope,
-    Interpretable,
-};
-use std::{
-    rc::Rc
-};
+use crate::{types::*, Interpretable, Scope};
+use std::rc::Rc;
 
 /* ======== MAIN ======== */
 pub fn init_main_obj() -> Object {
