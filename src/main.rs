@@ -8,11 +8,13 @@ use structopt::StructOpt;
 
 mod objects;
 mod types;
+mod tokenizer;
 
 use objects::init_main_obj;
 use types::*;
 
-// TODO: Implement a tokenizer which includes token locations for each token (useful for debugging)
+use tokenizer::tokenize_file;
+
 // TODO: Implement the compiler
 // TODO: Implement better errors
 // TODO: Implement typechecking
@@ -73,6 +75,7 @@ pub trait Interpretable {
 
 #[derive(StructOpt)]
 enum Cmd {
+    Tokenize,
     Parse,
     Run,
 }
@@ -89,9 +92,20 @@ struct Opt {
 fn main() {
     let opt = Opt::from_args();
 
-    let file_contents = fs::read_to_string(opt.file).unwrap();
+    let file_contents = fs::read_to_string(&opt.file).unwrap();
 
     match opt.subcommand {
+        Cmd::Tokenize => {
+            println!("==== File:\n{}", file_contents);
+            match tokenize_file(opt.file) {
+                Ok(tokens) => {
+                    println!("==== Tokens:\n{:#?}", tokens);
+                }
+                Err(err) => {
+                    eprintln!("ERROR: {}", err)
+                }
+            }
+        }
         Cmd::Parse => {
             println!("==== File:\n{}", file_contents);
             match Block::from_str(&file_contents.trim()) {
