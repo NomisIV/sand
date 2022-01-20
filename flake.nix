@@ -21,7 +21,7 @@
           name = "sand";
           version = "0.1.0";
           src = ./.;
-          cargoSha256 = "sha256-Eu0IdVNj4bFcHimW5xNAW4dyl8iwk2W8cHs+mo3fxp4=";
+          cargoSha256 = "sha256-qDnewGwfc+0G0PrFQnSnJEyEhGXdq86fObpsTcv+U7E=";
         };
       in {
         defaultPackage.${system} = sand;
