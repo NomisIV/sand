@@ -191,6 +191,17 @@ pub fn init_num() -> Literal {
         })),
     );
 
+    num.insert(
+        "to_str".to_string(),
+        Literal::Fun(Callable::Intr(Intrinsic {
+            args: Vec::new(),
+            fun_interpret: Rc::new(|scope: &mut Scope| {
+                let selff = scope.get("self").unwrap().clone().as_num().unwrap();
+                Ok(Literal::Str(selff.to_string()))
+            })
+        }))
+    );
+
     Literal::Set(num)
 }
 
