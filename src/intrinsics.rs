@@ -222,8 +222,6 @@ pub fn init_bool() -> Literal {
                         pos: FilePos::internal(),
                     };
                     call.interpret(&mut scope.clone()).unwrap(); // TODO: handle unwrap
-                } else {
-                    println!("Self is not true :(");
                 }
                 Ok(Literal::Nope)
             }),
