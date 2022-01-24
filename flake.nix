@@ -27,7 +27,7 @@
         defaultPackage.${system} = sand;
 
         devShell.${system} = pkgs.mkShell {
-          buildInputs = with pkgs; [ rustc cargo rustfmt ];
+          buildInputs = with pkgs; [ rustc cargo rustfmt cargo-watch ];
         };
       };
     in builtins.foldl' (acc: system: acc // (config system)) { } systems;
