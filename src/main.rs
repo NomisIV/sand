@@ -1,83 +1,87 @@
-use std::collections::HashMap;
 use std::fmt;
 use std::fs;
-use std::io;
 use std::path::PathBuf;
-use std::str::FromStr;
 use structopt::StructOpt;
 
-mod objects;
-mod types;
+// mod objects;
+mod interpreter;
+mod parser;
 mod tokenizer;
+mod types;
 
-use objects::init_main_obj;
-use types::*;
+// use objects::*;
+use parser::parse_tokens;
+use parser::ParseError;
+use tokenizer::tokenize_str;
+use tokenizer::TokenError;
 
-use tokenizer::tokenize_file;
-
-// TODO: Implement the compiler
-// TODO: Implement better errors
+// TODO: Implement the compiler (llvm?)
 // TODO: Implement typechecking
 // TODO: Implement a language server
 
-#[derive(Debug)]
-pub enum SandParseError {
-    ParseErr(String),
-    Unidentifiable(String, String),
+#[derive(Clone, PartialEq)]
+pub struct FilePos {
+    file: PathBuf,
+    row: usize,
+    col: usize,
 }
 
-impl fmt::Display for SandParseError {
+impl fmt::Display for FilePos {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::ParseErr(msg) => write!(f, "{}", msg),
-            Self::Unidentifiable(string, r#type) => write!(
-                f,
-                "Cannot parse the following string into a {type}:\n{string}",
-                string = string,
-                r#type = r#type
-            ),
+        write!(f, "{}:{}:{}", self.file.display(), self.row, self.col)
+    }
+}
+
+impl fmt::Debug for FilePos {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}:{}:{}", self.file.display(), self.row, self.col)
+    }
+}
+
+impl FilePos {
+    pub fn new(file: &PathBuf, row: usize, col: usize) -> Self {
+        Self {
+            file: file.clone(),
+            row,
+            col,
         }
     }
 }
 
-#[derive(Debug)]
-pub enum SandInterpretingError {
-    NotInScope,
-    MismatchedParameters,
-    NoMember,
-    BadValue,
-    UseRead(io::Error),
-    UseParse(SandParseError),
+pub struct SandError {
+    pos: FilePos,
+    msg: String,
 }
 
-impl fmt::Display for SandInterpretingError {
+impl fmt::Display for SandError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::NotInScope => write!(f, "Value not in scope"),
-            Self::MismatchedParameters => write!(f, "Mismatched parameters"),
-            Self::NoMember => write!(f, "Object has no such member"),
-            Self::BadValue => write!(f, "The value is of the wrong type"),
-            Self::UseRead(err) => write!(f, "Cannot read file: {}", err),
-            Self::UseParse(err) => write!(f, "While parsing an included file: {}", err),
+        write!(f, "{}: {}", self.pos, self.msg)
+    }
+}
+
+impl From<TokenError> for SandError {
+    fn from(token_error: TokenError) -> Self {
+        Self {
+            pos: token_error.pos,
+            msg: format!("TOKEN_ERROR: {}", token_error.msg),
         }
     }
 }
 
-type Scope = HashMap<Var, Literal>;
-
-pub trait Interpretable {
-    fn interpret(&self, scope: &mut Scope) -> Result<Literal, SandInterpretingError>;
+impl From<ParseError> for SandError {
+    fn from(parse_error: ParseError) -> Self {
+        Self {
+            pos: parse_error.pos,
+            msg: format!("PARSE_ERROR: {}", parse_error.msg),
+        }
+    }
 }
-
-// trait Compileable {
-//     fn compile(&self, scope: &mut Scope, buffer: impl Write) -> Result<()>;
-// }
 
 #[derive(StructOpt)]
 enum Cmd {
     Tokenize,
     Parse,
-    Run,
+    // Run,
 }
 
 #[derive(StructOpt)]
@@ -97,37 +101,47 @@ fn main() {
     match opt.subcommand {
         Cmd::Tokenize => {
             println!("==== File:\n{}", file_contents);
-            match tokenize_file(opt.file) {
+            match tokenize_str(&file_contents, &opt.file, 1, 1) {
                 Ok(tokens) => {
                     println!("==== Tokens:\n{:#?}", tokens);
                 }
                 Err(err) => {
-                    eprintln!("ERROR: {}", err)
+                    eprintln!("{}", SandError::from(err))
                 }
             }
         }
         Cmd::Parse => {
             println!("==== File:\n{}", file_contents);
-            match Block::from_str(&file_contents.trim()) {
-                Ok(tree) => {
-                    println!("==== Tree:\n{:#?}", tree);
+            match tokenize_str(&file_contents, &opt.file, 1, 1) {
+                Ok(tokens) => match parse_tokens(tokens) {
+                    Ok(tree) => {
+                        println!("==== Tree:\n{:#?}", tree);
+                    }
+                    Err(err) => {
+                        eprintln!("{}", SandError::from(err))
+                    }
                 }
                 Err(err) => {
-                    eprintln!("ERROR: {}", err)
+                    eprintln!("{}", SandError::from(err))
                 }
             }
         }
-        Cmd::Run => match Block::from_str(&file_contents.trim()) {
-            Ok(tree) => {
-                let mut scope: Scope = HashMap::new();
-                scope.insert(Var::new("main"), Literal::Object(init_main_obj()));
-
-                match tree.interpret(&mut scope) {
-                    Ok(_) => (),
-                    Err(err) => eprintln!("ERROR: {}", err),
-                }
-            }
-            Err(err) => eprintln!("ERROR: {}", err),
-        },
+        // Cmd::Run => match Block::from_str(&file_contents.trim()) {
+            // Ok(tree) => {
+            //     let mut scope: Scope = HashMap::new();
+            //     scope.insert(Var::new("Main"), Literal::Object(init_main_obj()));
+            //     scope.insert(Var::new("Nope"), Literal::Object(init_nope_obj()));
+            //     scope.insert(Var::new("Str"), Literal::Object(init_str_obj()));
+            //     scope.insert(Var::new("Num"), Literal::Object(init_num_obj()));
+            //     scope.insert(Var::new("Bool"), Literal::Object(init_bool_obj()));
+            //     scope.insert(Var::new("Fun"), Literal::Object(init_fun_obj()));
+            //
+            //     match tree.interpret(&mut scope) {
+            //         Ok(_) => (),
+            //         Err(err) => eprintln!("ERROR: {}", err),
+            //     }
+            // }
+            // Err(err) => eprintln!("ERROR: {}", err),
+        // },
     }
 }
