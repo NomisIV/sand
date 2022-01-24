@@ -1,21 +1,21 @@
 {
-    let Number.divisible = (n) {
+    let Num.divisible = (n) {
         self.mod(n).eq(0);
     };
 
-    let Number.is_prime = () {
+    let Num.is_prime = () {
         [2..self]
             .find(self.divisible)
             .eq(false)
-    }
+    };
 
     100.times((n) {
         n.is_prime().then(() {
             main.print(n)
         })
-    })
+    });
 
-    main.print(
+    Main.print(
         [1..100].filter((n) { n.is_prime() })
-    )
+    );
 }

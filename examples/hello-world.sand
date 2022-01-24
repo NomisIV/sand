@@ -2,6 +2,6 @@
     let foo = "Hello World!";
 
     5.times((n) {
-        main.print(foo);
+        Main.print(foo);
     });
 }
