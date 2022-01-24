@@ -63,7 +63,7 @@ pub fn tokenize_str(s: &str, f: &PathBuf, r: usize, c: usize) -> Result<Vec<Toke
     while let Some(c) = chars.next() {
         let pos = FilePos::new(f, row, col);
         let token = match c {
-            ' ' => {
+            ' ' | '\t' => {
                 col += 1;
                 continue;
             }
