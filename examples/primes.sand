@@ -11,11 +11,7 @@
 
     100.times((n) {
         n.is_prime().then(() {
-            main.print(n)
+            print(n.to_str())
         })
     });
-
-    Main.print(
-        [1..100].filter((n) { n.is_prime() })
-    );
 }

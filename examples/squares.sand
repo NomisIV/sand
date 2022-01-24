@@ -1,5 +1,7 @@
 {
+    include "std.sand";
+
     100.times((n) {
-        Main.print(n.pow(2));
+        print(n.pow(2).to_str());
     });
 }
