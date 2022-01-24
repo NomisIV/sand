@@ -1,10 +1,28 @@
-use crate::FilePos;
-use crate::interpreter::{InterpretingError, Scope};
+use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
 
+use crate::interpreter::{InterpretingError, Scope};
+use crate::FilePos;
+
+#[derive(Debug)]
+pub struct TypeError {
+    pub msg: String,
+    pub pos: FilePos,
+}
+
+impl TypeError {
+    fn new(msg: &str, pos: &FilePos) -> Self {
+        Self {
+            msg: msg.to_string(),
+            pos: pos.clone(),
+        }
+    }
+}
+
 // TODO: Add a position field for every type
 // TODO: Make members not public, or is this a bad idea?
+#[derive(Clone)]
 pub struct Intrinsic {
     pub args: Vec<Var>,
     pub fun_interpret: Rc<dyn Fn(&mut Scope) -> Result<Literal, InterpretingError>>,
@@ -24,56 +42,119 @@ impl PartialEq for Intrinsic {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Callable {
     Fun(Function),
     Intr(Intrinsic),
 }
 
-#[derive(Debug, PartialEq)]
+impl Callable {
+    pub fn get_args(&self) -> Vec<Var> {
+        match self {
+            Self::Fun(fun) => fun.args.clone(),
+            Self::Intr(intr) => intr.args.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Function {
     pub args: Vec<Var>,
     pub body: Block,
-    pub pos: FilePos
+    pub pos: FilePos,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
     Nope,
     Str(String),
     Num(isize),
     Bool(bool),
     Fun(Callable),
+    Set(HashMap<String, Literal>),
 }
 
-#[derive(Debug, PartialEq)]
+impl Literal {
+    pub fn as_nope(self) -> Result<(), TypeError> {
+        match self {
+            Self::Nope => Ok(()),
+            _ => Err(TypeError::new("Literal is not a Nope", &FilePos::temp())),
+        }
+    }
+
+    pub fn as_str(self) -> Result<String, TypeError> {
+        match self {
+            Self::Str(str) => Ok(str),
+            _ => Err(TypeError::new("Literal is not a string", &FilePos::temp())),
+        }
+    }
+
+    pub fn as_num(self) -> Result<isize, TypeError> {
+        match self {
+            Self::Num(num) => Ok(num),
+            _ => Err(TypeError::new("Literal is not a number", &FilePos::temp())),
+        }
+    }
+
+    pub fn as_bool(self) -> Result<bool, TypeError> {
+        match self {
+            Self::Bool(bool) => Ok(bool),
+            _ => Err(TypeError::new("Literal is not a boolean", &FilePos::temp())),
+        }
+    }
+
+    pub fn as_fun(self) -> Result<Callable, TypeError> {
+        match self {
+            Self::Fun(fun) => Ok(fun),
+            _ => Err(TypeError::new("Literal is not a function", &FilePos::temp())),
+        }
+    }
+
+    pub fn as_set(self) -> Result<HashMap<String, Literal>, TypeError> {
+        match self {
+            Self::Set(set) => Ok(set),
+            _ => Err(TypeError::new("Literal is not a set", &FilePos::temp())),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     Lit(Literal),
     Ref(Reference),
     FunCall {
         fun: Box<Value>,
         params: Vec<Value>,
-        pos: FilePos
+        pos: FilePos,
     },
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Var {
     pub name: String,
     pub pos: FilePos,
 }
 
-#[derive(Debug, PartialEq)]
+impl Var {
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            pos: FilePos::internal(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Reference {
     Var(Var),
     Member {
-        val: Box<Value>,
+        set: Box<Value>,
         field: Var,
-        pos: FilePos
+        pos: FilePos,
     },
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
     Assignment {
         var: Reference,
@@ -84,7 +165,7 @@ pub enum Statement {
     Include(String),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Block {
     pub statements: Vec<Statement>,
     pub pos: FilePos,

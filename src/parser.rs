@@ -44,7 +44,7 @@ impl Parse for Function {
                     if let TokenType::Char(',') = token2.r#type {
                         args.push(Var::parse(&vec![token.clone()])?.ok()?);
                     } else {
-                        return None // TODO: This should be an error
+                        return None; // TODO: This should be an error
                     }
                 } else {
                     args.push(Var::parse(&vec![token.clone()])?.ok()?);
@@ -53,7 +53,11 @@ impl Parse for Function {
 
             let body = Block::parse(&vec![tokens.get(1).unwrap().clone()])?.ok()?;
 
-            Some(Ok(Self { args, body, pos: tokens.into() }))
+            Some(Ok(Self {
+                args,
+                body,
+                pos: tokens.into(),
+            }))
         } else {
             None
         }
@@ -141,7 +145,11 @@ impl Parse for Value {
                     return None;
                 };
 
-                Some(Ok(Self::FunCall { fun, params, pos: tokens.into() }))
+                Some(Ok(Self::FunCall {
+                    fun,
+                    params,
+                    pos: tokens.into(),
+                }))
             })
     }
 }
@@ -153,7 +161,7 @@ impl Parse for Var {
             if let TokenType::Variable(var) = &tokens.get(0).unwrap().r#type {
                 Some(Ok(Self {
                     name: var.to_string(),
-                    pos: tokens.into()
+                    pos: tokens.into(),
                 }))
             } else {
                 None
@@ -172,7 +180,7 @@ impl Parse for Reference {
             Var::parse(tokens).map(|res| res.map(|var| Reference::Var(var)))
         } else if tokens.len() >= 3 {
             if let TokenType::Char('.') = tokens.get(tokens.len() - 2).unwrap().r#type {
-                let val = match Value::parse(&tokens.get(..tokens.len() - 2).unwrap().to_vec()) {
+                let set = match Value::parse(&tokens.get(..tokens.len() - 2).unwrap().to_vec()) {
                     Some(Ok(val)) => Box::new(val),
                     Some(Err(err)) => return Some(Err(err)),
                     None => return None,
@@ -182,7 +190,11 @@ impl Parse for Reference {
                     Some(Err(err)) => return Some(Err(err)),
                     None => return None,
                 };
-                Some(Ok(Reference::Member { val, field, pos: tokens.into() }))
+                Some(Ok(Reference::Member {
+                    set,
+                    field,
+                    pos: tokens.into(),
+                }))
             } else {
                 None
             }
@@ -213,7 +225,11 @@ impl Parse for Statement {
                 let var = Reference::parse(&var.get(1..).unwrap().to_vec())?.ok()?;
                 let val = Value::parse(&val.get(1..).unwrap().to_vec())?.ok()?;
 
-                Some(Ok(Self::Assignment { var, val, pos: tokens.into() }))
+                Some(Ok(Self::Assignment {
+                    var,
+                    val,
+                    pos: tokens.into(),
+                }))
             } else {
                 None
             }
@@ -224,7 +240,9 @@ impl Parse for Statement {
                 if let Some(token) = tokens.get(1) {
                     if let TokenType::String(str) = &token.r#type {
                         Some(Ok(Self::Include(str.to_string())))
-                    } else {unimplemented!("Handle error if provided input argument isn't a string")}
+                    } else {
+                        unimplemented!("Handle error if provided input argument isn't a string")
+                    }
                 } else {
                     unimplemented!("Handle error if include has no argument")
                 }
@@ -275,7 +293,24 @@ impl Parse for Block {
                     _ => statement.push(token.clone()),
                 }
             }
-            Some(Ok(Block { statements, pos: tokens.into() }))
+            if statement.is_empty() {
+                statements.push(Statement::Value(Value::Lit(Literal::Nope)))
+            } else {
+                statements.push(match Statement::parse(&statement) {
+                    Some(Ok(s)) => s,
+                    Some(Err(err)) => return Some(Err(err)),
+                    None => {
+                        return Some(Err(ParseError::new(
+                            "Cannot parse into block",
+                            tokens.to_vec(),
+                        )))
+                    }
+                });
+            }
+            Some(Ok(Block {
+                statements,
+                pos: tokens.into(),
+            }))
         } else {
             return None;
         }
@@ -302,16 +337,24 @@ mod tests {
 
     #[test]
     fn parse_block() {
-        let tokens = tokenize_str("{ foo(); }", &PathBuf::new(), 1, 1).unwrap();
+        let str = r#"{
+            "Hello World!"
+        }"#;
+        let tokens = tokenize_str(str, &PathBuf::new(), 1, 1).unwrap();
         let block = Block::parse(&tokens).unwrap().unwrap();
         assert!(block.statements.len() == 1)
     }
 
     #[test]
     fn parse_block_multiple_statements() {
-        let tokens = tokenize_str("{ let foo = \"hello\"; bar(); }", &PathBuf::new(), 1, 1).unwrap();
+        let str = r#"{
+            69;
+            "Hello World!";
+            420;
+        }"#;
+        let tokens = tokenize_str(str, &PathBuf::new(), 1, 1).unwrap();
         let block = Block::parse(&tokens).unwrap().unwrap();
-        assert!(block.statements.len() == 2)
+        assert!(block.statements.len() == 4) // There is an impliced Literal::Nope as the last statement
     }
 
     #[test]
@@ -320,7 +363,7 @@ mod tests {
         let statement = Statement::parse(&tokens).unwrap().unwrap();
         match statement {
             Statement::Assignment { .. } => (),
-            _ => panic!()
+            _ => panic!(),
         }
     }
 
@@ -329,8 +372,8 @@ mod tests {
         let tokens = tokenize_str("foo()", &PathBuf::new(), 1, 1).unwrap();
         let statement = Statement::parse(&tokens).unwrap().unwrap();
         match statement {
-            Statement::Value( .. ) => (),
-            _ => panic!()
+            Statement::Value(..) => (),
+            _ => panic!(),
         }
     }
 
@@ -347,7 +390,7 @@ mod tests {
         let reference = Reference::parse(&tokens).unwrap().unwrap();
         match reference {
             Reference::Var(..) => (),
-            _ => panic!()
+            _ => panic!(),
         }
     }
 
@@ -356,8 +399,8 @@ mod tests {
         let tokens = tokenize_str("Foo.bar", &PathBuf::new(), 1, 1).unwrap();
         let reference = Reference::parse(&tokens).unwrap().unwrap();
         match reference {
-            Reference::Member{..} => (),
-            _ => panic!()
+            Reference::Member { .. } => (),
+            _ => panic!(),
         }
     }
 
@@ -366,8 +409,8 @@ mod tests {
         let tokens = tokenize_str("Foo.bar().baz", &PathBuf::new(), 1, 1).unwrap();
         let reference = Reference::parse(&tokens).unwrap().unwrap();
         match reference {
-            Reference::Member{..} => (),
-            _ => panic!()
+            Reference::Member { .. } => (),
+            _ => panic!(),
         }
     }
 
@@ -377,7 +420,7 @@ mod tests {
         let val = Value::parse(&tokens).unwrap().unwrap();
         match val {
             Value::Lit(..) => (),
-            _ => panic!()
+            _ => panic!(),
         }
     }
 
@@ -387,7 +430,7 @@ mod tests {
         let val = Value::parse(&tokens).unwrap().unwrap();
         match val {
             Value::Ref(..) => (),
-            _ => panic!()
+            _ => panic!(),
         }
     }
 
@@ -396,8 +439,8 @@ mod tests {
         let tokens = tokenize_str("foo()", &PathBuf::new(), 1, 1).unwrap();
         let val = Value::parse(&tokens).unwrap().unwrap();
         match val {
-            Value::FunCall{ params, .. } => assert!(params.len() == 0),
-            _ => panic!()
+            Value::FunCall { params, .. } => assert!(params.len() == 0),
+            _ => panic!(),
         }
     }
 
@@ -406,8 +449,8 @@ mod tests {
         let tokens = tokenize_str("foo(1, \"hello\", bar())", &PathBuf::new(), 1, 1).unwrap();
         let val = Value::parse(&tokens).unwrap().unwrap();
         match val {
-            Value::FunCall{ params, .. } => assert!(params.len() == 3),
-            _ => panic!()
+            Value::FunCall { params, .. } => assert!(params.len() == 3),
+            _ => panic!(),
         }
     }
 
@@ -451,8 +494,8 @@ mod tests {
         let tokens = tokenize_str("() { foo(); }", &PathBuf::new(), 1, 1).unwrap();
         let lit = Literal::parse(&tokens).unwrap().unwrap();
         match lit {
-            Literal::Fun{ .. } => (),
-            _ => panic!()
+            Literal::Fun { .. } => (),
+            _ => panic!(),
         }
     }
 
@@ -465,7 +508,13 @@ mod tests {
 
     #[test]
     fn parse_function_complex() {
-        let tokens = tokenize_str("(foo, bar, baz) { foo(); \"hello\"; }", &PathBuf::new(), 1, 1).unwrap();
+        let tokens = tokenize_str(
+            "(foo, bar, baz) { foo(); \"hello\"; }",
+            &PathBuf::new(),
+            1,
+            1,
+        )
+        .unwrap();
         let fun = Function::parse(&tokens).unwrap().unwrap();
         assert!(fun.args.len() == 3)
     }

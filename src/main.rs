@@ -1,20 +1,24 @@
+use interpreter::InterpretingError;
+use types::TypeError;
+use std::collections::HashMap;
 use std::fmt;
 use std::fs;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
-// mod objects;
+mod intrinsics;
 mod interpreter;
 mod parser;
 mod tokenizer;
 mod types;
 
-// use objects::*;
+use intrinsics::*;
+use interpreter::Interpret;
 use parser::parse_tokens;
 use parser::ParseError;
 use tokenizer::tokenize_str;
-use tokenizer::TokenError;
 use tokenizer::Token;
+use tokenizer::TokenError;
 
 // TODO: Implement the compiler (llvm?)
 // TODO: Implement typechecking
@@ -47,6 +51,22 @@ impl FilePos {
             col,
         }
     }
+
+    pub fn internal() -> Self {
+        Self {
+            file: PathBuf::from("internal"),
+            row: 0,
+            col: 0,
+        }
+    }
+
+    pub fn temp() -> Self {
+        Self {
+            file: PathBuf::from("undefined"),
+            row: 0,
+            col: 0,
+        }
+    }
 }
 
 impl From<&Vec<Token>> for FilePos {
@@ -61,6 +81,12 @@ pub struct SandError {
 }
 
 impl fmt::Display for SandError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}: {}", self.pos, self.msg)
+    }
+}
+
+impl fmt::Debug for SandError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}: {}", self.pos, self.msg)
     }
@@ -84,11 +110,29 @@ impl From<ParseError> for SandError {
     }
 }
 
+impl From<InterpretingError> for SandError {
+    fn from(parse_error: InterpretingError) -> Self {
+        Self {
+            pos: parse_error.pos,
+            msg: format!("INTERPRETING_ERROR: {}", parse_error.msg),
+        }
+    }
+}
+
+impl From<TypeError> for SandError {
+    fn from(parse_error: TypeError) -> Self {
+        Self {
+            pos: parse_error.pos,
+            msg: format!("TYPE_ERROR: {}", parse_error.msg),
+        }
+    }
+}
+
 #[derive(StructOpt)]
 enum Cmd {
     Tokenize,
     Parse,
-    // Run,
+    Run,
 }
 
 #[derive(StructOpt)]
@@ -127,28 +171,27 @@ fn main() {
                     Err(err) => {
                         eprintln!("{}", SandError::from(err))
                     }
-                }
+                },
                 Err(err) => {
                     eprintln!("{}", SandError::from(err))
                 }
             }
         }
-        // Cmd::Run => match Block::from_str(&file_contents.trim()) {
-            // Ok(tree) => {
-            //     let mut scope: Scope = HashMap::new();
-            //     scope.insert(Var::new("Main"), Literal::Object(init_main_obj()));
-            //     scope.insert(Var::new("Nope"), Literal::Object(init_nope_obj()));
-            //     scope.insert(Var::new("Str"), Literal::Object(init_str_obj()));
-            //     scope.insert(Var::new("Num"), Literal::Object(init_num_obj()));
-            //     scope.insert(Var::new("Bool"), Literal::Object(init_bool_obj()));
-            //     scope.insert(Var::new("Fun"), Literal::Object(init_fun_obj()));
-            //
-            //     match tree.interpret(&mut scope) {
-            //         Ok(_) => (),
-            //         Err(err) => eprintln!("ERROR: {}", err),
-            //     }
-            // }
-            // Err(err) => eprintln!("ERROR: {}", err),
-        // },
+        Cmd::Run => match tokenize_str(&file_contents, &opt.file, 1, 1) {
+            Ok(tokens) => match parse_tokens(tokens) {
+                Ok(tree) => {
+                    match tree.interpret(&mut init_scope()) {
+                        Ok(result) => println!("Program exited with {:?}", result),
+                        Err(err) => eprintln!("{}", SandError::from(err)),
+                    }
+                }
+                Err(err) => {
+                    eprintln!("{}", SandError::from(err))
+                }
+            },
+            Err(err) => {
+                eprintln!("{}", SandError::from(err))
+            }
+        },
     }
 }
