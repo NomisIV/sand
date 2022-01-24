@@ -44,7 +44,7 @@ impl Parse for Function {
                     if let TokenType::Char(',') = token2.r#type {
                         args.push(Var::parse(&vec![token.clone()])?.ok()?);
                     } else {
-                        return None // TODO
+                        return None // TODO: This should be an error
                     }
                 } else {
                     args.push(Var::parse(&vec![token.clone()])?.ok()?);
@@ -53,7 +53,7 @@ impl Parse for Function {
 
             let body = Block::parse(&vec![tokens.get(1).unwrap().clone()])?.ok()?;
 
-            Some(Ok(Self { args, body }))
+            Some(Ok(Self { args, body, pos: tokens.into() }))
         } else {
             None
         }
@@ -141,7 +141,7 @@ impl Parse for Value {
                     return None;
                 };
 
-                Some(Ok(Self::FunCall { fun, params }))
+                Some(Ok(Self::FunCall { fun, params, pos: tokens.into() }))
             })
     }
 }
@@ -151,7 +151,10 @@ impl Parse for Var {
         assert!(tokens.len() > 0);
         if tokens.len() == 1 {
             if let TokenType::Variable(var) = &tokens.get(0).unwrap().r#type {
-                Some(Ok(Self(var.to_string())))
+                Some(Ok(Self {
+                    name: var.to_string(),
+                    pos: tokens.into()
+                }))
             } else {
                 None
             }
@@ -179,7 +182,7 @@ impl Parse for Reference {
                     Some(Err(err)) => return Some(Err(err)),
                     None => return None,
                 };
-                Some(Ok(Reference::Member { val, field }))
+                Some(Ok(Reference::Member { val, field, pos: tokens.into() }))
             } else {
                 None
             }
@@ -210,7 +213,7 @@ impl Parse for Statement {
                 let var = Reference::parse(&var.get(1..).unwrap().to_vec())?.ok()?;
                 let val = Value::parse(&val.get(1..).unwrap().to_vec())?.ok()?;
 
-                Some(Ok(Self::Assignment { var, val }))
+                Some(Ok(Self::Assignment { var, val, pos: tokens.into() }))
             } else {
                 None
             }
@@ -272,7 +275,7 @@ impl Parse for Block {
                     _ => statement.push(token.clone()),
                 }
             }
-            Some(Ok(Block { statements }))
+            Some(Ok(Block { statements, pos: tokens.into() }))
         } else {
             return None;
         }
@@ -471,14 +474,14 @@ mod tests {
     fn parse_variable1() {
         let tokens = tokenize_str("foo", &PathBuf::new(), 1, 1).unwrap();
         let fun = Var::parse(&tokens).unwrap().unwrap();
-        assert!(fun == Var("foo".to_string()))
+        assert!(fun.name == "foo")
     }
 
     #[test]
     fn parse_variable2() {
         let tokens = tokenize_str("foo_bar", &PathBuf::new(), 1, 1).unwrap();
         let fun = Var::parse(&tokens).unwrap().unwrap();
-        assert!(fun == Var("foo_bar".to_string()))
+        assert!(fun.name == "foo_bar")
     }
 
     #[test]

@@ -1,7 +1,9 @@
+use crate::FilePos;
 use crate::interpreter::{InterpretingError, Scope};
 use std::fmt;
 use std::rc::Rc;
 
+// TODO: Add a position field for every type
 // TODO: Make members not public, or is this a bad idea?
 pub struct Intrinsic {
     pub args: Vec<Var>,
@@ -32,6 +34,7 @@ pub enum Callable {
 pub struct Function {
     pub args: Vec<Var>,
     pub body: Block,
+    pub pos: FilePos
 }
 
 #[derive(Debug, PartialEq)]
@@ -47,21 +50,36 @@ pub enum Literal {
 pub enum Value {
     Lit(Literal),
     Ref(Reference),
-    FunCall { fun: Box<Value>, params: Vec<Value> },
+    FunCall {
+        fun: Box<Value>,
+        params: Vec<Value>,
+        pos: FilePos
+    },
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Var(pub String);
+pub struct Var {
+    pub name: String,
+    pub pos: FilePos,
+}
 
 #[derive(Debug, PartialEq)]
 pub enum Reference {
     Var(Var),
-    Member { val: Box<Value>, field: Var },
+    Member {
+        val: Box<Value>,
+        field: Var,
+        pos: FilePos
+    },
 }
 
 #[derive(Debug, PartialEq)]
 pub enum Statement {
-    Assignment { var: Reference, val: Value },
+    Assignment {
+        var: Reference,
+        val: Value,
+        pos: FilePos,
+    },
     Value(Value),
     Include(String),
 }
@@ -69,4 +87,5 @@ pub enum Statement {
 #[derive(Debug, PartialEq)]
 pub struct Block {
     pub statements: Vec<Statement>,
+    pub pos: FilePos,
 }

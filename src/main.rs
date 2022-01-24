@@ -14,6 +14,7 @@ use parser::parse_tokens;
 use parser::ParseError;
 use tokenizer::tokenize_str;
 use tokenizer::TokenError;
+use tokenizer::Token;
 
 // TODO: Implement the compiler (llvm?)
 // TODO: Implement typechecking
@@ -45,6 +46,12 @@ impl FilePos {
             row,
             col,
         }
+    }
+}
+
+impl From<&Vec<Token>> for FilePos {
+    fn from(tokens: &Vec<Token>) -> Self {
+        tokens.get(0).unwrap().pos.clone()
     }
 }
 
