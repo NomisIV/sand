@@ -1,0 +1,23 @@
+Predefined:
+- None
+- String
+- Number
+- Bool (-> True | False)
+- Intrinsic
+
+Block        -> '{' Statements '}'
+Statements   -> Statement | Statement ';' Statements
+Statement    -> Assignment | Value | Include
+Assignment   -> 'let' Reference '=' Value
+Reference    -> Variable | Member
+Variable     -> String
+Member       -> Value '.' Variable
+Value        -> Literal | Reference | FunctionCall
+Literal      -> None | '"' String '"' | Number | Bool | Callable
+Function     -> '(' Arguments ')' Block
+Arguments    -> Variable | Variable ',' Arguments
+FunctionCall -> Value '(' Parameters ')'
+Callable     -> Function | Intrinsic
+Parameters   -> Value | Value ',' Parameters
+Include	     -> 'use' String
+
