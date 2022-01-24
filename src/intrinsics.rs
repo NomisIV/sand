@@ -9,19 +9,22 @@ use crate::FilePos;
 
 /* ======== MAIN ======== */
 pub fn init_main() -> Literal {
-    let mut main = HashMap::new();
+    let mut main: Scope = HashMap::new();
+
+    main.insert("STDOUT".to_string(), Literal::Num(1));
+    main.insert("STDERR".to_string(), Literal::Num(2));
 
     main.insert(
-        "print".to_string(),
+        "write".to_string(),
         Literal::Fun(Callable::Intr(Intrinsic {
-            args: vec![Var::new("value")],
+            args: vec![Var::new("stream"), Var::new("string")],
             fun_interpret: Rc::new(|scope: &mut Scope| {
-                match scope.get("value").unwrap() {
-                    Literal::Str(string) => println!("{}", string),
-                    Literal::Num(number) => println!("{}", number),
-                    Literal::Bool(boolean) => println!("{}", boolean),
-                    Literal::Nope => println!("Nope"),
-                    _ => eprintln!("Cannot print literal"),
+                let stream = scope.get("stream").unwrap().clone().as_num().unwrap();
+                let string = scope.get("string").unwrap().clone().as_str().unwrap();
+                match stream {
+                    1 => println!("{}", string),
+                    2 => eprintln!("{}", string),
+                    _ => unreachable!()
                 }
                 Ok(Literal::Nope)
             }),

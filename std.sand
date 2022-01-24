@@ -1,0 +1,9 @@
+{
+    let print = (s) {
+        Main.write(Main.STDOUT, s);
+    };
+
+    let error = (s) {
+        Main.write(Main.STDERR, s)
+    }
+}
