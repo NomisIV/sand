@@ -1,9 +1,7 @@
-use interpreter::InterpretingError;
 use std::fmt;
 use std::fs;
 use std::path::PathBuf;
 use structopt::StructOpt;
-use types::TypeError;
 
 mod interpreter;
 mod intrinsics;
@@ -12,12 +10,14 @@ mod tokenizer;
 mod types;
 
 use interpreter::Interpret;
+use interpreter::InterpretingError;
 use intrinsics::*;
 use parser::parse_tokens;
 use parser::ParseError;
 use tokenizer::tokenize_str;
 use tokenizer::Token;
 use tokenizer::TokenError;
+use types::TypeError;
 
 // TODO: Implement the compiler (llvm?)
 // TODO: Implement typechecking
