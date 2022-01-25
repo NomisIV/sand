@@ -11,9 +11,6 @@ use crate::FilePos;
 pub fn init_main() -> Literal {
     let mut main: Scope = HashMap::new();
 
-    main.insert("STDOUT".to_string(), Literal::Num(1.0));
-    main.insert("STDERR".to_string(), Literal::Num(2.0));
-
     main.insert(
         "write".to_string(),
         Literal::Fun(Callable::Intr(Intrinsic {

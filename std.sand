@@ -1,3 +1,5 @@
+let Main.STDOUT = 1;
+let Main.STDERR = 2;
 
 # print: (str){nope}
 let print = (s) {
