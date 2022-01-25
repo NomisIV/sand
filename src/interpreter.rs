@@ -240,7 +240,7 @@ mod tests {
         }"#;
         let tokens = tokenize_str(str, &PathBuf::new(), 1, 1).unwrap();
         let tree = parse_tokens(tokens).unwrap();
-        assert!(tree.interpret(&mut init_scope()).unwrap() == Literal::Num(2))
+        assert!(tree.interpret(&mut init_scope()).unwrap() == Literal::Num(2.0))
     }
 
     #[test]

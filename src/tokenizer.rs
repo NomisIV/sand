@@ -21,7 +21,7 @@ pub enum TokenType {
     String(String),
     Variable(String),
     // Object(String),
-    Number(isize), // TODO: Allow for all numbers
+    Number(f64),
     Bool(bool),
     Char(char),
     Group {
@@ -127,6 +127,7 @@ pub fn tokenize_str(s: &str, f: &PathBuf, r: usize, c: usize) -> Result<Vec<Toke
                 }
             }
             '0'..='9' => {
+                // TODO: Allow for tokenizing floats
                 let mut number_str = String::from(c);
                 while let Some(char) = chars.peek() {
                     if *char >= '0' && *char <= '9' {
@@ -136,7 +137,11 @@ pub fn tokenize_str(s: &str, f: &PathBuf, r: usize, c: usize) -> Result<Vec<Toke
                         break;
                     }
                 }
-                let r#type = TokenType::Number(number_str.parse().unwrap()); // TODO: Unwrap
+                let r#type = TokenType::Number(
+                    number_str
+                        .parse()
+                        .map_err(|_err| TokenError::new("Bad int", &pos))?,
+                );
                 Token { r#type, pos }
             }
             'a'..='z' | 'A'..='Z' | '_' => {

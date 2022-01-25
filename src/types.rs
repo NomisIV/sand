@@ -68,7 +68,7 @@ pub struct Function {
 pub enum Literal {
     Nope,
     Str(String),
-    Num(isize),
+    Num(f64),
     Bool(bool),
     Fun(Callable),
     Set(HashMap<String, Literal>),
@@ -89,9 +89,22 @@ impl Literal {
         }
     }
 
-    pub fn as_num(self) -> Result<isize, TypeError> {
+    pub fn as_num(self) -> Result<f64, TypeError> {
         match self {
             Self::Num(num) => Ok(num),
+            _ => Err(TypeError::new("Literal is not a number", &FilePos::temp())),
+        }
+    }
+
+    pub fn as_int(self) -> Result<isize, TypeError> {
+        match self {
+            Self::Num(num) => {
+                if num.fract() == 0.0 {
+                    Ok(num as isize)
+                } else {
+                    Err(TypeError::new("Number is not an integer", &FilePos::temp()))
+                }
+            }
             _ => Err(TypeError::new("Literal is not a number", &FilePos::temp())),
         }
     }

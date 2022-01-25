@@ -11,20 +11,20 @@ use crate::FilePos;
 pub fn init_main() -> Literal {
     let mut main: Scope = HashMap::new();
 
-    main.insert("STDOUT".to_string(), Literal::Num(1));
-    main.insert("STDERR".to_string(), Literal::Num(2));
+    main.insert("STDOUT".to_string(), Literal::Num(1.0));
+    main.insert("STDERR".to_string(), Literal::Num(2.0));
 
     main.insert(
         "write".to_string(),
         Literal::Fun(Callable::Intr(Intrinsic {
             args: vec![Var::new("stream"), Var::new("string")],
             fun_interpret: Rc::new(|scope: &mut Scope| {
-                let stream = scope.get("stream").unwrap().clone().as_num().unwrap();
+                let stream = scope.get("stream").unwrap().clone().as_int().unwrap();
                 let string = scope.get("string").unwrap().clone().as_str().unwrap();
                 match stream {
                     1 => println!("{}", string),
                     2 => eprintln!("{}", string),
-                    _ => unreachable!()
+                    _ => unreachable!(),
                 }
                 Ok(Literal::Nope)
             }),
@@ -77,42 +77,54 @@ pub fn init_num() -> Literal {
         })),
     );
 
-    // num.insert(
-    //     "sub".to_string(),
-    //     Literal::Fun(Callable::Intr(Intrinsic {
-    //         args: vec!["n".to_string()],
-    //         fun_interpret: Rc::new(|scope: &mut Scope| {
-    //             let selff = scope.get(&Var::new("self")).unwrap().as_number().unwrap();
-    //             let n = scope.get(&Var::new("n")).unwrap().as_number().unwrap();
-    //             Literal::Number(selff - n)
-    //         }),
-    //     })),
-    // );
-    //
-    // num.insert(
-    //     "mul".to_string(),
-    //     Literal::Fun(Callable::Intr(Intrinsic {
-    //         args: vec!["n".to_string()],
-    //         fun_interpret: Rc::new(|scope: &mut Scope| {
-    //             let selff = scope.get(&Var::new("self")).unwrap().as_number().unwrap();
-    //             let n = scope.get(&Var::new("n")).unwrap().as_number().unwrap();
-    //             Literal::Number(selff * n)
-    //         }),
-    //     })),
-    // );
-    //
-    // num.insert(
-    //     "div".to_string(),
-    //     Literal::Fun(Callable::Intr(Intrinsic {
-    //         args: vec!["n".to_string()],
-    //         fun_interpret: Rc::new(|scope: &mut Scope| {
-    //             let selff = scope.get(&Var::new("self")).unwrap().as_number().unwrap();
-    //             let n = scope.get(&Var::new("n")).unwrap().as_number().unwrap();
-    //             Literal::Number(selff / n)
-    //         }),
-    //     })),
-    // );
-    //
+    num.insert(
+        "sub".to_string(),
+        Literal::Fun(Callable::Intr(Intrinsic {
+            args: vec![Var::new("n")],
+            fun_interpret: Rc::new(|scope: &mut Scope| {
+                let selff = scope.get("self").unwrap().clone().as_num().unwrap();
+                let n = scope.get("n").unwrap().clone().as_num().unwrap();
+                Ok(Literal::Num(selff - n))
+            }),
+        })),
+    );
+
+    num.insert(
+        "mul".to_string(),
+        Literal::Fun(Callable::Intr(Intrinsic {
+            args: vec![Var::new("n")],
+            fun_interpret: Rc::new(|scope: &mut Scope| {
+                let selff = scope.get("self").unwrap().clone().as_num().unwrap();
+                let n = scope.get("n").unwrap().clone().as_num().unwrap();
+                Ok(Literal::Num(selff * n))
+            }),
+        })),
+    );
+
+    num.insert(
+        "div".to_string(),
+        Literal::Fun(Callable::Intr(Intrinsic {
+            args: vec![Var::new("n")],
+            fun_interpret: Rc::new(|scope: &mut Scope| {
+                let selff = scope.get("self").unwrap().clone().as_num().unwrap();
+                let n = scope.get("n").unwrap().clone().as_num().unwrap();
+                Ok(Literal::Num(selff / n))
+            }),
+        })),
+    );
+
+    num.insert(
+        "mod".to_string(),
+        Literal::Fun(Callable::Intr(Intrinsic {
+            args: vec![Var::new("n")],
+            fun_interpret: Rc::new(|scope: &mut Scope| {
+                let selff = scope.get("self").unwrap().clone().as_num().unwrap();
+                let n = scope.get("n").unwrap().clone().as_num().unwrap();
+                Ok(Literal::Num(selff % n))
+            }),
+        })),
+    );
+
     num.insert(
         "pow".to_string(),
         Literal::Fun(Callable::Intr(Intrinsic {
@@ -177,11 +189,11 @@ pub fn init_num() -> Literal {
         Literal::Fun(Callable::Intr(Intrinsic {
             args: vec![Var::new("f")],
             fun_interpret: Rc::new(|scope: &mut Scope| {
-                let selff = scope.get("self").unwrap().clone().as_num().unwrap();
+                let selff = scope.get("self").unwrap().clone().as_int().unwrap();
                 for n in 0..selff {
                     let call = Value::FunCall {
                         fun: Box::new(Value::Lit(scope.get("f").unwrap().clone())),
-                        params: vec![Value::Lit(Literal::Num(n))],
+                        params: vec![Value::Lit(Literal::Num(n as f64))],
                         pos: FilePos::internal(),
                     };
                     call.interpret(&mut scope.clone()).unwrap(); // TODO: handle unwrap
@@ -191,6 +203,7 @@ pub fn init_num() -> Literal {
         })),
     );
 
+    // TODO: Implement this in the standard library instead
     num.insert(
         "to_str".to_string(),
         Literal::Fun(Callable::Intr(Intrinsic {

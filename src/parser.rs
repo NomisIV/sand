@@ -472,14 +472,14 @@ mod tests {
     fn parse_literal_number() {
         let tokens = tokenize_str("5", &PathBuf::new(), 1, 1).unwrap();
         let lit = Literal::parse(&tokens).unwrap().unwrap();
-        assert!(lit == Literal::Num(5))
+        assert!(lit == Literal::Num(5.0))
     }
 
     #[test]
     fn parse_literal_number_float() {
         let tokens = tokenize_str("5.0", &PathBuf::new(), 1, 1).unwrap();
         let lit = Literal::parse(&tokens).unwrap().unwrap();
-        assert!(lit == Literal::Num(5))
+        assert!(lit == Literal::Num(5.0))
     }
 
     #[test]
