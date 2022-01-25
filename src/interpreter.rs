@@ -30,7 +30,7 @@ impl Interpret for Callable {
     fn interpret(self, scope: &mut Scope) -> Result<Literal, InterpretingError> {
         match self {
             Self::Fun(fun) => fun.body.interpret(scope),
-            Self::Intr(intr) => (intr.fun_interpret)(scope)
+            Self::Intr(intr) => (intr.fun_interpret)(scope),
         }
     }
 }
@@ -65,7 +65,10 @@ impl Interpret for Reference {
                     }
                     Literal::Set(set) => set.clone(),
                 };
-                Ok(set_set.get(&field.name).ok_or(InterpretingError::new("Set has no such member", &field.pos)).map(|val| val.clone())?)
+                Ok(set_set
+                    .get(&field.name)
+                    .ok_or(InterpretingError::new("Set has no such member", &field.pos))
+                    .map(|val| val.clone())?)
             }
         }
     }
@@ -80,7 +83,7 @@ impl Interpret for Value {
                 let fun = fun.interpret(scope)?.as_fun().unwrap();
                 let args = fun.get_args();
                 if args.len() != params.len() {
-                    return Err(InterpretingError::new("Mismatched arity", &FilePos::temp()))
+                    return Err(InterpretingError::new("Mismatched arity", &FilePos::temp()));
                 }
                 let mut fun_scope = scope.clone();
                 for n in 0..args.len() {
@@ -106,7 +109,8 @@ impl Interpret for Statement {
                     }
                     Reference::Member { set, field, pos } => {
                         if let Value::Ref(Reference::Var(var)) = *set {
-                            let mut parent = scope.get(&var.name).unwrap().clone().as_set().unwrap(); // TODO: Handle unwraps
+                            let mut parent =
+                                scope.get(&var.name).unwrap().clone().as_set().unwrap(); // TODO: Handle unwraps
                             parent.insert(field.name, val.interpret(scope)?);
                             scope.insert(var.name, Literal::Set(parent));
                             Ok(Literal::Nope)
@@ -121,12 +125,32 @@ impl Interpret for Statement {
             }
             Self::Value(val) => val.interpret(scope),
             Self::Include(file) => {
-                let str = fs::read_to_string(&file)
-                    .map_err(|err| InterpretingError::new(&format!("Cannot include `{}` because:\n{}", &file, err), &FilePos::temp()))?;
-                let tokens = tokenize_str(&str, &PathBuf::from(&file), 1, 1)
-                    .map_err(|err| InterpretingError::new(&format!("Cannot tokenize `{}` because:\n{}", &file, SandError::from(err)), &FilePos::temp()))?;
-                let tree = parse_tokens(tokens)
-                    .map_err(|err| InterpretingError::new(&format!("Cannot parse `{}` because:\n{}", &file, SandError::from(err)), &FilePos::temp()))?;
+                let str = fs::read_to_string(&file).map_err(|err| {
+                    InterpretingError::new(
+                        &format!("Cannot include `{}` because:\n{}", &file, err),
+                        &FilePos::temp(),
+                    )
+                })?;
+                let tokens = tokenize_str(&str, &PathBuf::from(&file), 1, 1).map_err(|err| {
+                    InterpretingError::new(
+                        &format!(
+                            "Cannot tokenize `{}` because:\n{}",
+                            &file,
+                            SandError::from(err)
+                        ),
+                        &FilePos::temp(),
+                    )
+                })?;
+                let tree = parse_tokens(tokens).map_err(|err| {
+                    InterpretingError::new(
+                        &format!(
+                            "Cannot parse `{}` because:\n{}",
+                            &file,
+                            SandError::from(err)
+                        ),
+                        &FilePos::temp(),
+                    )
+                })?;
                 tree.interpret(scope)
             }
         }
@@ -196,7 +220,7 @@ mod tests {
         let mut scope = init_scope();
         tree.interpret(&mut scope).unwrap();
         assert!(scope.contains_key("Foo"));
-        let foo = scope.get("Foo").unwrap().clone().as_set().unwrap(); 
+        let foo = scope.get("Foo").unwrap().clone().as_set().unwrap();
         assert!(foo.contains_key("bar"));
         assert!(foo.get("bar").unwrap() == &Literal::Str("Hello World!".to_string()))
     }
@@ -219,7 +243,9 @@ mod tests {
         }"#;
         let tokens = tokenize_str(str, &PathBuf::new(), 1, 1).unwrap();
         let tree = parse_tokens(tokens).unwrap();
-        assert!(tree.interpret(&mut init_scope()).unwrap() == Literal::Str("Hello World!".to_string()))
+        assert!(
+            tree.interpret(&mut init_scope()).unwrap() == Literal::Str("Hello World!".to_string())
+        )
     }
 
     #[test]

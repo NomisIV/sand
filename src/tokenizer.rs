@@ -1,5 +1,6 @@
-use crate::FilePos;
 use std::path::PathBuf;
+
+use crate::FilePos;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Keyword {
@@ -13,7 +14,6 @@ pub enum GroupType {
     Curly,
 }
 
-// TODO: Make this implement PartialEq
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
     Keyword(Keyword),

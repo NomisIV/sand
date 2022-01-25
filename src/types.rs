@@ -119,7 +119,10 @@ impl Literal {
     pub fn as_fun(self) -> Result<Callable, TypeError> {
         match self {
             Self::Fun(fun) => Ok(fun),
-            _ => Err(TypeError::new("Literal is not a function", &FilePos::temp())),
+            _ => Err(TypeError::new(
+                "Literal is not a function",
+                &FilePos::temp(),
+            )),
         }
     }
 

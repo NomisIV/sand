@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::interpreter::InterpretingError;
-use crate::types::*;
-use crate::interpreter::Scope;
 use crate::interpreter::Interpret;
+use crate::interpreter::InterpretingError;
+use crate::interpreter::Scope;
+use crate::types::*;
 use crate::FilePos;
 
 /* ======== MAIN ======== */
@@ -40,9 +40,12 @@ pub fn init_main() -> Literal {
                 for (var, val) in scope.iter() {
                     println!("== {}: {:?}", var, val)
                 }
-                Err(InterpretingError::new("Exiting after dumping scope", &FilePos::internal()))
-            })
-        }))
+                Err(InterpretingError::new(
+                    "Exiting after dumping scope",
+                    &FilePos::internal(),
+                ))
+            }),
+        })),
     );
 
     Literal::Set(main)
@@ -132,7 +135,7 @@ pub fn init_num() -> Literal {
             fun_interpret: Rc::new(|scope: &mut Scope| {
                 let selff = scope.get("self").unwrap().clone().as_num().unwrap();
                 let n = scope.get("n").unwrap().clone().as_num().unwrap();
-                Ok(Literal::Num(selff.pow(n as u32)))
+                Ok(Literal::Num(selff.powf(n)))
             }),
         })),
     );
@@ -211,8 +214,8 @@ pub fn init_num() -> Literal {
             fun_interpret: Rc::new(|scope: &mut Scope| {
                 let selff = scope.get("self").unwrap().clone().as_num().unwrap();
                 Ok(Literal::Str(selff.to_string()))
-            })
-        }))
+            }),
+        })),
     );
 
     Literal::Set(num)

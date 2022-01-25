@@ -1,25 +1,25 @@
 use interpreter::InterpretingError;
-use types::TypeError;
-use std::collections::HashMap;
 use std::fmt;
 use std::fs;
 use std::path::PathBuf;
 use structopt::StructOpt;
+use types::TypeError;
 
-mod intrinsics;
 mod interpreter;
+mod intrinsics;
 mod parser;
 mod tokenizer;
 mod types;
 
-use intrinsics::*;
 use interpreter::Interpret;
+use intrinsics::*;
 use parser::parse_tokens;
 use parser::ParseError;
 use tokenizer::tokenize_str;
 use tokenizer::Token;
 use tokenizer::TokenError;
 
+// TODO: Implements comments
 // TODO: Implement the compiler (llvm?)
 // TODO: Implement typechecking
 // TODO: Implement a language server
@@ -179,12 +179,10 @@ fn main() {
         }
         Cmd::Run => match tokenize_str(&file_contents, &opt.file, 1, 1) {
             Ok(tokens) => match parse_tokens(tokens) {
-                Ok(tree) => {
-                    match tree.interpret(&mut init_scope()) {
-                        Ok(result) => println!("Program exited with {:?}", result),
-                        Err(err) => eprintln!("{}", SandError::from(err)),
-                    }
-                }
+                Ok(tree) => match tree.interpret(&mut init_scope()) {
+                    Ok(result) => println!("Program exited with {:?}", result),
+                    Err(err) => eprintln!("{}", SandError::from(err)),
+                },
                 Err(err) => {
                     eprintln!("{}", SandError::from(err))
                 }
