@@ -1,17 +1,25 @@
-{
-    let Num.divisible = (n) {
-        self.mod(n).eq(0);
-    };
+include "../std.grain";
 
-    let Num.is_prime = () {
-        [2..self]
-            .find(self.divisible)
-            .eq(false)
-    };
+# divisible: (int, int){bool}
+let divisible = (self, n) {
+    self.mod(n).eq(0)
+};
 
+# is_prime: (int){bool}
+let is_prime = (self) {
+    [2..self]
+        .find(self.divisible)
+        .eq(false)
+};
+
+# main: ([str]){int};
+let main = (args) {
+    # Print the 100 first primes
     100.times((n) {
         n.is_prime().then(() {
             print(n.to_str())
         })
     });
-}
+
+    0
+};

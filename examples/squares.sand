@@ -1,7 +1,11 @@
-{
-    include "std.sand";
+include "../std.sand";
 
+# main ([str]){int}
+let main = (args) {
+    # Print the 100 first squared numbers
     100.times((n) {
         print(n.pow(2).to_str());
     });
-}
+
+    0
+};

@@ -1,18 +1,21 @@
+use std::env;
 use std::fmt;
 use std::fs;
 use std::path::PathBuf;
+use std::process::exit;
 use structopt::StructOpt;
 
+// mod compiler;
 mod interpreter;
 mod intrinsics;
 mod parser;
 mod tokenizer;
 mod types;
 
-use interpreter::Interpret;
 use interpreter::InterpretingError;
+use interpreter::interpret_file;
 use intrinsics::*;
-use parser::parse_tokens;
+use parser::parse_file;
 use parser::ParseError;
 use tokenizer::tokenize_str;
 use tokenizer::Token;
@@ -38,7 +41,7 @@ impl fmt::Display for FilePos {
 
 impl fmt::Debug for FilePos {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}:{}:{}", self.file.display(), self.row, self.col)
+        write!(f, "{}:{}:{}", self.file.file_name().unwrap().to_str().unwrap(), self.row, self.col)
     }
 }
 
@@ -148,6 +151,8 @@ fn main() {
 
     let file_contents = fs::read_to_string(&opt.file).unwrap();
 
+    let args = Vec::new(); // TODO
+
     match opt.subcommand {
         Cmd::Tokenize => {
             println!("==== File:\n{}", file_contents);
@@ -163,7 +168,7 @@ fn main() {
         Cmd::Parse => {
             println!("==== File:\n{}", file_contents);
             match tokenize_str(&file_contents, &opt.file, 1, 1) {
-                Ok(tokens) => match parse_tokens(tokens) {
+                Ok(tokens) => match parse_file(tokens) {
                     Ok(tree) => {
                         println!("==== Tree:\n{:#?}", tree);
                     }
@@ -177,9 +182,9 @@ fn main() {
             }
         }
         Cmd::Run => match tokenize_str(&file_contents, &opt.file, 1, 1) {
-            Ok(tokens) => match parse_tokens(tokens) {
-                Ok(tree) => match tree.interpret(&mut init_scope()) {
-                    Ok(result) => println!("Program exited with {:?}", result),
+            Ok(tokens) => match parse_file(tokens) {
+                Ok(tree) => match interpret_file(tree, args) {
+                    Ok(exit_code) => exit(exit_code),
                     Err(err) => eprintln!("{}", SandError::from(err)),
                 },
                 Err(err) => {

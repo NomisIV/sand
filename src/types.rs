@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fmt;
+use std::path::PathBuf;
 use std::rc::Rc;
 
 use crate::interpreter::{InterpretingError, Scope};
@@ -60,7 +61,7 @@ impl Callable {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {
     pub args: Vec<Var>,
-    pub body: Block,
+    pub body: Statements,
     pub pos: FilePos,
 }
 
@@ -179,11 +180,8 @@ pub enum Statement {
         pos: FilePos,
     },
     Value(Value),
-    Include(String),
+    Include(PathBuf),
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Block {
-    pub statements: Vec<Statement>,
-    pub pos: FilePos,
-}
+pub struct Statements(pub Vec<Statement>);

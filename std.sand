@@ -1,9 +1,10 @@
-{
-    let print = (s) {
-        Main.write(Main.STDOUT, s);
-    };
 
-    let error = (s) {
-        Main.write(Main.STDERR, s)
-    }
-}
+# print: (str){nope}
+let print = (s) {
+    Main.write(Main.STDOUT, s);
+};
+
+# error: (str){nope}
+let error = (s) {
+    Main.write(Main.STDERR, s);
+};

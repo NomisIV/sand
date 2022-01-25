@@ -1,9 +1,13 @@
-use crate::FilePos;
-// use crate::FilePos;
-use crate::{parser::parse_tokens, tokenizer::tokenize_str, types::*, SandError};
 use std::path::PathBuf;
-use std::{collections::HashMap, fs};
-// use crate::SandError;
+use std::collections::HashMap;
+use std::fs;
+
+use crate::FilePos;
+use crate::intrinsics::init_scope;
+use crate::parser::parse_file;
+use crate::tokenizer::tokenize_str;
+use crate::types::*;
+use crate::SandError;
 
 pub type Scope = HashMap<String, Literal>;
 
@@ -131,7 +135,7 @@ impl Interpret for Statement {
             Self::Include(file) => {
                 let str = fs::read_to_string(&file).map_err(|err| {
                     InterpretingError::new(
-                        &format!("Cannot include `{}` because:\n{}", &file, err),
+                        &format!("Cannot include `{}` because:\n{}", file.display(), err),
                         &FilePos::temp(),
                     )
                 })?;
@@ -139,17 +143,17 @@ impl Interpret for Statement {
                     InterpretingError::new(
                         &format!(
                             "Cannot tokenize `{}` because:\n{}",
-                            &file,
+                            file.display(),
                             SandError::from(err)
                         ),
                         &FilePos::temp(),
                     )
                 })?;
-                let tree = parse_tokens(tokens).map_err(|err| {
+                let tree = parse_file(tokens).map_err(|err| {
                     InterpretingError::new(
                         &format!(
                             "Cannot parse `{}` because:\n{}",
-                            &file,
+                            file.display(),
                             SandError::from(err)
                         ),
                         &FilePos::temp(),
@@ -161,15 +165,27 @@ impl Interpret for Statement {
     }
 }
 
-impl Interpret for Block {
+impl Interpret for Statements {
     fn interpret(self, scope: &mut Scope) -> Result<Literal, InterpretingError> {
-        if self.statements.len() > 1 {
-            for i in 0..self.statements.len() - 1 {
-                self.statements.get(i).unwrap().clone().interpret(scope)?;
+        if self.0.len() > 1 {
+            for i in 0..self.0.len() - 1 {
+                self.0.get(i).unwrap().clone().interpret(scope)?;
             }
         }
-        self.statements.last().unwrap().clone().interpret(scope)
+        self.0.last().unwrap().clone().interpret(scope)
     }
+}
+
+pub fn interpret_file(tree: Statements, args: Vec<String>) -> Result<i32, InterpretingError> {
+    let mut scope = init_scope();
+    tree.interpret(&mut scope)?;
+    let call = Value::FunCall {
+        fun: Box::new(Value::Lit(scope.get("main").unwrap().clone())),
+        params: vec![Value::Lit(Literal::Str("ur mom gae lol".to_string()))], // TODO
+        pos: FilePos::internal(),
+    };
+    let exit_code = call.interpret(&mut scope)?.as_int().unwrap();
+    Ok(exit_code as i32)
 }
 
 #[cfg(test)]
@@ -184,7 +200,7 @@ mod tests {
             "Hello World!"
         }"#;
         let tokens = tokenize_str(str, &PathBuf::new(), 1, 1).unwrap();
-        let tree = parse_tokens(tokens).unwrap();
+        let tree = parse_file(tokens).unwrap();
         assert!(tree.interpret(&mut init_scope()).unwrap() != Literal::Nope)
     }
 
@@ -196,7 +212,7 @@ mod tests {
             420;
         }"#;
         let tokens = tokenize_str(str, &PathBuf::new(), 1, 1).unwrap();
-        let tree = parse_tokens(tokens).unwrap();
+        let tree = parse_file(tokens).unwrap();
         assert!(tree.interpret(&mut init_scope()).unwrap() == Literal::Nope)
     }
 
@@ -207,7 +223,7 @@ mod tests {
             foo
         }"#;
         let tokens = tokenize_str(str, &PathBuf::new(), 1, 1).unwrap();
-        let tree = parse_tokens(tokens).unwrap();
+        let tree = parse_file(tokens).unwrap();
         let mut scope = init_scope();
         tree.interpret(&mut scope).unwrap();
         assert!(scope.contains_key("foo"));
@@ -220,7 +236,7 @@ mod tests {
             let Foo.bar = "Hello World!";
         }"#;
         let tokens = tokenize_str(str, &PathBuf::new(), 1, 1).unwrap();
-        let tree = parse_tokens(tokens).unwrap();
+        let tree = parse_file(tokens).unwrap();
         let mut scope = init_scope();
         tree.interpret(&mut scope).unwrap();
         assert!(scope.contains_key("Foo"));
@@ -236,7 +252,7 @@ mod tests {
         //     "Hello World!"
         // }"#;
         // let tokens = tokenize_str(str, &PathBuf::new(), 1, 1).unwrap();
-        // let tree = parse_tokens(tokens).unwrap();
+        // let tree = parse_file(tokens).unwrap();
         // assert!(tree.interpret(&mut init_scope()).unwrap() == Literal::Str("Hello World!".to_string()))
     }
 
@@ -246,7 +262,7 @@ mod tests {
             "Hello World!"
         }"#;
         let tokens = tokenize_str(str, &PathBuf::new(), 1, 1).unwrap();
-        let tree = parse_tokens(tokens).unwrap();
+        let tree = parse_file(tokens).unwrap();
         assert!(
             tree.interpret(&mut init_scope()).unwrap() == Literal::Str("Hello World!".to_string())
         )
@@ -259,7 +275,7 @@ mod tests {
             foo
         }"#;
         let tokens = tokenize_str(str, &PathBuf::new(), 1, 1).unwrap();
-        let tree = parse_tokens(tokens).unwrap();
+        let tree = parse_file(tokens).unwrap();
         assert!(tree.interpret(&mut init_scope()).unwrap() == Literal::Str("hello".to_string()))
     }
 
@@ -269,7 +285,7 @@ mod tests {
             1.add(1)
         }"#;
         let tokens = tokenize_str(str, &PathBuf::new(), 1, 1).unwrap();
-        let tree = parse_tokens(tokens).unwrap();
+        let tree = parse_file(tokens).unwrap();
         assert!(tree.interpret(&mut init_scope()).unwrap() == Literal::Num(2.0))
     }
 
@@ -281,7 +297,7 @@ mod tests {
             } ("foo")
         }"#;
         let tokens = tokenize_str(str, &PathBuf::new(), 1, 1).unwrap();
-        let tree = parse_tokens(tokens).unwrap();
+        let tree = parse_file(tokens).unwrap();
         assert!(tree.interpret(&mut init_scope()).unwrap() == Literal::Str("foo".to_string()))
     }
 }

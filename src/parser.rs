@@ -51,13 +51,16 @@ impl Parse for Function {
                 }
             }
 
-            let body = Block::parse(&vec![tokens.get(1).unwrap().clone()])?.ok()?;
-
-            Some(Ok(Self {
-                args,
-                body,
-                pos: tokens.into(),
-            }))
+            if let TokenType::Group { r#type: GroupType::Curly, tokens: body_tokens } = &tokens.get(1).unwrap().r#type {
+                let body = Statements::parse(&body_tokens)?.ok()?;
+                    Some(Ok(Self {
+                        args,
+                        body,
+                        pos: tokens.into(),
+                    }))
+            } else {
+                None
+            }
         } else {
             None
         }
@@ -248,8 +251,9 @@ impl Parse for Statement {
                 if s == "include" {
                     // TODO: Allow for multiple files per include statement?
                     if let Some(token) = tokens.get(1) {
-                        if let TokenType::String(str) = &token.r#type {
-                            Some(Ok(Self::Include(str.to_string())))
+                        if let TokenType::StringLit(str) = &token.r#type {
+                            let file = token.pos.file.parent().unwrap().join(str).canonicalize().unwrap();
+                            Some(Ok(Self::Include(file)))
                         } else {
                             unimplemented!("Handle error if provided input argument isn't a string")
                         }
@@ -274,67 +278,52 @@ impl Parse for Statement {
     }
 }
 
-impl Parse for Block {
+impl Parse for Statements {
     fn parse(tokens: &Vec<Token>) -> Option<Result<Self, ParseError>> {
         assert!(tokens.len() > 0);
-        if tokens.len() != 1 {
-            return None;
-        }
-
-        if let TokenType::Group {
-            r#type: GroupType::Curly,
-            tokens: group_tokens,
-        } = &tokens.get(0).unwrap().r#type
-        {
-            let mut statements = Vec::new();
-            let mut statement = Vec::new();
-            for token in group_tokens.iter() {
-                match token.r#type {
-                    TokenType::Char(';') => {
-                        statements.push(match Statement::parse(&statement) {
-                            Some(Ok(s)) => s,
-                            Some(Err(err)) => return Some(Err(err)),
-                            None => {
-                                return Some(Err(ParseError::new(
-                                    "Cannot parse into block",
-                                    tokens.to_vec(),
-                                )))
-                            }
-                        });
-                        statement = Vec::new();
-                    }
-                    _ => statement.push(token.clone()),
+        let mut statements = Vec::new();
+        let mut statement = Vec::new();
+        for token in tokens.iter() {
+            match token.r#type {
+                TokenType::Char(';') => {
+                    statements.push(match Statement::parse(&statement) {
+                        Some(Ok(s)) => s,
+                        Some(Err(err)) => return Some(Err(err)),
+                        None => {
+                            return Some(Err(ParseError::new(
+                                "Cannot parse into a statement",
+                                statement,
+                            )))
+                        }
+                    });
+                    statement = Vec::new();
                 }
+                _ => statement.push(token.clone()),
             }
-            if statement.is_empty() {
-                statements.push(Statement::Value(Value::Lit(Literal::Nope)))
-            } else {
-                statements.push(match Statement::parse(&statement) {
-                    Some(Ok(s)) => s,
-                    Some(Err(err)) => return Some(Err(err)),
-                    None => {
-                        return Some(Err(ParseError::new(
-                            "Cannot parse into block",
-                            tokens.to_vec(),
-                        )))
-                    }
-                });
-            }
-            Some(Ok(Block {
-                statements,
-                pos: tokens.into(),
-            }))
-        } else {
-            return None;
         }
+        if statement.is_empty() {
+            statements.push(Statement::Value(Value::Lit(Literal::Nope)))
+        } else {
+            statements.push(match Statement::parse(&statement) {
+                Some(Ok(s)) => s,
+                Some(Err(err)) => return Some(Err(err)),
+                None => {
+                    return Some(Err(ParseError::new(
+                        "Cannot parse into block",
+                        tokens.to_vec(),
+                    )))
+                }
+            });
+        }
+        Some(Ok(Self(statements)))
     }
 }
 
-pub fn parse_tokens(tokens: Vec<Token>) -> Result<Block, SandError> {
-    Block::parse(&tokens)
+pub fn parse_file(tokens: Vec<Token>) -> Result<Statements, SandError> {
+    Statements::parse(&tokens)
         .ok_or_else(|| {
             SandError::from(ParseError::new(
-                "File cannot be parsed into a block",
+                "File cannot be parsed",
                 tokens,
             ))
         })?
@@ -348,27 +337,27 @@ mod tests {
 
     // TODO: Add tests which *should* fail to check that parsing functions fail when they should
 
-    #[test]
-    fn parse_block() {
-        let str = r#"{
-            "Hello World!"
-        }"#;
-        let tokens = tokenize_str(str, &PathBuf::new(), 1, 1).unwrap();
-        let block = Block::parse(&tokens).unwrap().unwrap();
-        assert!(block.statements.len() == 1)
-    }
-
-    #[test]
-    fn parse_block_multiple_statements() {
-        let str = r#"{
-            69;
-            "Hello World!";
-            420;
-        }"#;
-        let tokens = tokenize_str(str, &PathBuf::new(), 1, 1).unwrap();
-        let block = Block::parse(&tokens).unwrap().unwrap();
-        assert!(block.statements.len() == 4) // There is an impliced Literal::Nope as the last statement
-    }
+    // #[test]
+    // fn parse_block() {
+    //     let str = r#"{
+    //         "Hello World!"
+    //     }"#;
+    //     let tokens = tokenize_str(str, &PathBuf::new(), 1, 1).unwrap();
+    //     let block = Block::parse(&tokens).unwrap().unwrap();
+    //     assert!(block.statements.len() == 1)
+    // }
+    //
+    // #[test]
+    // fn parse_block_multiple_statements() {
+    //     let str = r#"{
+    //         69;
+    //         "Hello World!";
+    //         420;
+    //     }"#;
+    //     let tokens = tokenize_str(str, &PathBuf::new(), 1, 1).unwrap();
+    //     let block = Block::parse(&tokens).unwrap().unwrap();
+    //     assert!(block.statements.len() == 4) // There is an impliced Literal::Nope as the last statement
+    // }
 
     #[test]
     fn parse_statement_assignment() {
@@ -394,7 +383,7 @@ mod tests {
     fn parse_statement_include() {
         let tokens = tokenize_str("include \"std.sand\"", &PathBuf::new(), 1, 1).unwrap();
         let statement = Statement::parse(&tokens).unwrap().unwrap();
-        assert!(statement == Statement::Include("std.sand".to_string()))
+        assert!(statement == Statement::Include(PathBuf::from("std.sand")))
     }
 
     #[test]
