@@ -51,6 +51,10 @@ impl Interpret for Reference {
                         scope.insert("self".to_string(), Literal::Str(str.clone()));
                         scope.get("Str").unwrap().clone().as_set().unwrap()
                     }
+                    Literal::Char(char) => {
+                        scope.insert("self".to_string(), Literal::Char(char.clone()));
+                        scope.get("Char").unwrap().clone().as_set().unwrap()
+                    }
                     Literal::Num(num) => {
                         scope.insert("self".to_string(), Literal::Num(num.clone()));
                         scope.get("Num").unwrap().clone().as_set().unwrap()

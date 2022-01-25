@@ -63,6 +63,12 @@ pub fn init_str() -> Literal {
     Literal::Set(str)
 }
 
+/* ======== CHAR ======== */
+pub fn init_char() -> Literal {
+    let mut char = HashMap::new();
+    Literal::Set(char)
+}
+
 /* ======== NUMBER ======== */
 pub fn init_num() -> Literal {
     let mut num = HashMap::new();
@@ -257,6 +263,7 @@ pub fn init_scope() -> Scope {
     scope.insert("Main".to_string(), init_main());
     scope.insert("Nope".to_string(), init_nope());
     scope.insert("Str".to_string(), init_str());
+    scope.insert("Char".to_string(), init_char());
     scope.insert("Num".to_string(), init_num());
     scope.insert("Bool".to_string(), init_bool());
     scope.insert("Fun".to_string(), init_fun());

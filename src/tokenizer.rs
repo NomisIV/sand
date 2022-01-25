@@ -3,27 +3,30 @@ use std::path::PathBuf;
 use crate::FilePos;
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum Keyword {
-    Let,
-    Include,
-}
-
-#[derive(Debug, PartialEq, Clone)]
 pub enum GroupType {
     Paren,
+    Brack,
     Curly,
+}
+
+impl From<char> for GroupType {
+    fn from(c: char) -> Self {
+        match c {
+            '(' | ')' => GroupType::Paren,
+            '[' | ']' => GroupType::Brack,
+            '{' | '}' => GroupType::Curly,
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
-    Keyword(Keyword),
-    Nope,
-    String(String),
-    Variable(String),
-    // Object(String),
-    Number(f64),
-    Bool(bool),
-    Char(char),
+    StringLit(String), // "hello"
+    CharLit(char),     // 'c'
+    Number(f64),       // 69
+    String(String),    // foo
+    Char(char),        // +
     Group {
         r#type: GroupType,
         tokens: Vec<Token>,
@@ -72,39 +75,20 @@ pub fn tokenize_str(s: &str, f: &PathBuf, r: usize, c: usize) -> Result<Vec<Toke
                 row += 1;
                 continue;
             }
-            '(' => {
-                group_stack.push(Token {
-                    r#type: TokenType::Group {
-                        r#type: GroupType::Paren,
-                        tokens: Vec::new(),
-                    },
-                    pos,
-                });
-                col += 1;
-                continue;
-            }
-            ')' => {
-                let group = group_stack
-                    .pop()
-                    .ok_or(TokenError::new("Mismatched parenthesis", &pos))?;
-                if let TokenType::Group {
-                    r#type: GroupType::Paren,
-                    ..
-                } = group.r#type
-                {
-                    group
-                } else {
-                    return Err(TokenError {
-                        // TODO: Get the name right
-                        msg: "Mismatched parenthesis".to_string(),
-                        pos,
-                    });
+            '#' => {
+                while let Some(char) = chars.peek() {
+                    if char != &'\n' {
+                        chars.next();
+                    } else {
+                        break;
+                    }
                 }
+                continue;
             }
-            '{' => {
+            '(' | '[' | '{' => {
                 group_stack.push(Token {
                     r#type: TokenType::Group {
-                        r#type: GroupType::Curly,
+                        r#type: GroupType::from(c),
                         tokens: Vec::new(),
                     },
                     pos,
@@ -112,18 +96,22 @@ pub fn tokenize_str(s: &str, f: &PathBuf, r: usize, c: usize) -> Result<Vec<Toke
                 col += 1;
                 continue;
             }
-            '}' => {
+            ')' | ']' | '}' => {
                 let group = group_stack
                     .pop()
                     .ok_or(TokenError::new("Mismatched parenthesis", &pos))?;
-                if let TokenType::Group {
-                    r#type: GroupType::Curly,
-                    ..
-                } = group.r#type
-                {
-                    group
+                if let TokenType::Group { ref r#type, .. } = group.r#type {
+                    if r#type == &GroupType::from(c) {
+                        group
+                    } else {
+                        return Err(TokenError {
+                            // TODO: Get the name right
+                            msg: "Mismatched parenthesis".to_string(),
+                            pos,
+                        });
+                    }
                 } else {
-                    return Err(TokenError::new("Mismatched parenthesis", &pos));
+                    unreachable!()
                 }
             }
             '0'..='9' => {
@@ -157,14 +145,7 @@ pub fn tokenize_str(s: &str, f: &PathBuf, r: usize, c: usize) -> Result<Vec<Toke
                         break;
                     }
                 }
-                let r#type = match str.as_str() {
-                    "let" => TokenType::Keyword(Keyword::Let),
-                    "include" => TokenType::Keyword(Keyword::Include),
-                    "true" => TokenType::Bool(true),
-                    "false" => TokenType::Bool(false),
-                    "Nope" => TokenType::Nope,
-                    _ => TokenType::Variable(str),
-                };
+                let r#type = TokenType::String(str);
                 Token { r#type, pos }
             }
             '"' => {
@@ -181,13 +162,40 @@ pub fn tokenize_str(s: &str, f: &PathBuf, r: usize, c: usize) -> Result<Vec<Toke
                 }
                 if !matched {
                     return Err(TokenError {
-                        msg: "Mismatched quotation mark".to_string(),
+                        msg: "Mismatched double quotation mark".to_string(),
                         pos,
                     });
                 }
                 Token {
-                    r#type: TokenType::String(str),
+                    r#type: TokenType::StringLit(str),
                     pos,
+                }
+            }
+            '\'' => {
+                if let Some(char) = chars.next() {
+                    if let Some(char2) = chars.next() {
+                        if char2 == '\'' {
+                            Token {
+                                r#type: TokenType::CharLit(char),
+                                pos,
+                            }
+                        } else {
+                            return Err(TokenError {
+                                msg: "Mismatched single quotation mark".to_string(),
+                                pos,
+                            });
+                        }
+                    } else {
+                        return Err(TokenError {
+                            msg: "Mismatched single quotation mark".to_string(),
+                            pos,
+                        });
+                    }
+                } else {
+                    return Err(TokenError {
+                        msg: "Expected char, but got nothing".to_string(),
+                        pos,
+                    });
                 }
             }
             c => Token {
@@ -224,44 +232,92 @@ mod tests {
     use super::*;
 
     #[test]
-    fn tokenize_keyword_let() {
-        let tokens = tokenize_str("let", &PathBuf::new(), 1, 1).unwrap();
+    fn tokenize_string_lit() {
+        let tokens = tokenize_str("\"hello\"", &PathBuf::new(), 1, 1).unwrap();
         assert!(tokens.len() == 1);
-        assert!(tokens.get(0).unwrap().r#type == TokenType::Keyword(Keyword::Let))
+        assert!(tokens.get(0).unwrap().r#type == TokenType::StringLit("hello".to_string()))
+    }
+
+    #[test]
+    fn tokenize_string_lit_newline() {
+        let tokens = tokenize_str("\"he\\nllo\"", &PathBuf::new(), 1, 1).unwrap();
+        assert!(tokens.len() == 1);
+        assert!(tokens.get(0).unwrap().r#type == TokenType::StringLit("he\nllo".to_string()))
+    }
+
+    #[test]
+    fn tokenize_string_lit_escaped_quote() {
+        let tokens = tokenize_str("\"he\\\"llo\"", &PathBuf::new(), 1, 1).unwrap();
+        assert!(tokens.len() == 1);
+        assert!(tokens.get(0).unwrap().r#type == TokenType::StringLit("he\"llo".to_string()))
+    }
+
+    #[test]
+    fn tokenize_char_lit() {
+        let tokens = tokenize_str("'c'", &PathBuf::new(), 1, 1).unwrap();
+        assert!(tokens.len() == 1);
+        assert!(tokens.get(0).unwrap().r#type == TokenType::CharLit('c'))
+    }
+
+    #[test]
+    fn tokenize_char_lit_newline() {
+        let tokens = tokenize_str("'\\n'", &PathBuf::new(), 1, 1).unwrap();
+        assert!(tokens.len() == 1);
+        assert!(tokens.get(0).unwrap().r#type == TokenType::CharLit('\n'))
+    }
+
+    #[test]
+    fn tokenize_char_lit_escaped_quote() {
+        let tokens = tokenize_str("'\\''", &PathBuf::new(), 1, 1).unwrap();
+        assert!(tokens.len() == 1);
+        assert!(tokens.get(0).unwrap().r#type == TokenType::CharLit('\''))
+    }
+
+    #[test]
+    fn tokenize_number_int() {
+        let tokens = tokenize_str("5", &PathBuf::new(), 1, 1).unwrap();
+        assert!(tokens.len() == 1);
+        assert!(tokens.get(0).unwrap().r#type == TokenType::Number(5.0))
+    }
+
+    #[test]
+    fn tokenize_number_float() {
+        let tokens = tokenize_str("5.0", &PathBuf::new(), 1, 1).unwrap();
+        assert!(tokens.len() == 1);
+        assert!(tokens.get(0).unwrap().r#type == TokenType::Number(5.0))
     }
 
     #[test]
     fn tokenize_string() {
-        let tokens = tokenize_str("\"hello\"", &PathBuf::new(), 1, 1).unwrap();
-        assert!(tokens.len() == 1);
-        assert!(tokens.get(0).unwrap().r#type == TokenType::String("hello".to_string()))
-    }
-
-    #[test]
-    fn tokenize_string_with_newline() {
-        let tokens = tokenize_str("\"he\\nllo\"", &PathBuf::new(), 1, 1).unwrap();
-        assert!(tokens.len() == 1);
-        assert!(tokens.get(0).unwrap().r#type == TokenType::String("he\nllo".to_string()))
-    }
-
-    #[test]
-    fn tokenize_string_with_escaped_quote() {
-        let tokens = tokenize_str("\"he\\\"llo\"", &PathBuf::new(), 1, 1).unwrap();
-        assert!(tokens.len() == 1);
-        assert!(tokens.get(0).unwrap().r#type == TokenType::String("he\"llo".to_string()))
-    }
-
-    #[test]
-    fn parse_variable1() {
         let tokens = tokenize_str("foo", &PathBuf::new(), 1, 1).unwrap();
         assert!(tokens.len() == 1);
-        assert!(tokens.get(0).unwrap().r#type == TokenType::Variable("foo".to_string()))
+        assert!(tokens.get(0).unwrap().r#type == TokenType::String("foo".to_string()))
     }
 
     #[test]
-    fn parse_variable2() {
-        let tokens = tokenize_str("foo_bar", &PathBuf::new(), 1, 1).unwrap();
+    fn tokenize_string_complex() {
+        let tokens = tokenize_str("fo_o", &PathBuf::new(), 1, 1).unwrap();
         assert!(tokens.len() == 1);
-        assert!(tokens.get(0).unwrap().r#type == TokenType::Variable("foo_bar".to_string()))
+        assert!(tokens.get(0).unwrap().r#type == TokenType::String("fo_o".to_string()))
+    }
+
+    #[test]
+    fn tokenize_char() {
+        let tokens = tokenize_str(".", &PathBuf::new(), 1, 1).unwrap();
+        assert!(tokens.len() == 1);
+        assert!(tokens.get(0).unwrap().r#type == TokenType::Char('.'))
+    }
+
+    #[test]
+    fn tokenize_group() {
+        let tokens = tokenize_str("()", &PathBuf::new(), 1, 1).unwrap();
+        assert!(tokens.len() == 1);
+        assert!(
+            tokens.get(0).unwrap().r#type
+                == TokenType::Group {
+                    r#type: GroupType::Paren,
+                    tokens: Vec::new(),
+                }
+        )
     }
 }

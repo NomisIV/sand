@@ -19,7 +19,6 @@ use tokenizer::tokenize_str;
 use tokenizer::Token;
 use tokenizer::TokenError;
 
-// TODO: Implements comments
 // TODO: Implement the compiler (llvm?)
 // TODO: Implement typechecking
 // TODO: Implement a language server

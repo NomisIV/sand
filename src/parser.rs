@@ -76,10 +76,15 @@ impl Parse for Literal {
         {
             if tokens.len() == 1 {
                 match &tokens.get(0).unwrap().r#type {
-                    TokenType::Nope => Some(Ok(Self::Nope)),
-                    TokenType::String(s) => Some(Ok(Self::Str(s.clone()))),
+                    TokenType::StringLit(s) => Some(Ok(Self::Str(s.clone()))),
+                    TokenType::CharLit(c) => Some(Ok(Self::Char(c.clone()))),
                     TokenType::Number(n) => Some(Ok(Self::Num(n.clone()))),
-                    TokenType::Bool(b) => Some(Ok(Self::Bool(b.clone()))),
+                    TokenType::String(s) => match s.as_str() {
+                        "Nope" => Some(Ok(Self::Nope)),
+                        "True" => Some(Ok(Self::Bool(true))),
+                        "False" => Some(Ok(Self::Bool(false))),
+                        _ => None,
+                    },
                     _ => None,
                 }
             } else {
@@ -158,7 +163,7 @@ impl Parse for Var {
     fn parse(tokens: &Vec<Token>) -> Option<Result<Self, ParseError>> {
         assert!(tokens.len() > 0);
         if tokens.len() == 1 {
-            if let TokenType::Variable(var) = &tokens.get(0).unwrap().r#type {
+            if let TokenType::String(var) = &tokens.get(0).unwrap().r#type {
                 Some(Ok(Self {
                     name: var.to_string(),
                     pos: tokens.into(),
@@ -208,43 +213,51 @@ impl Parse for Statement {
     fn parse(tokens: &Vec<Token>) -> Option<Result<Self, ParseError>> {
         assert!(tokens.len() > 0);
         let out = {
-            if let TokenType::Keyword(Keyword::Let) = tokens.get(0).unwrap().r#type {
-                let (var, val) = tokens.split_at(
-                    tokens
-                        .iter()
-                        .position(|token| {
-                            if let TokenType::Char('=') = token.r#type {
-                                true
-                            } else {
-                                false
-                            }
-                        })
-                        .unwrap(),
-                );
-                // let var = Reference::parse(var.get(1..).unwrap().to_vec())?.map_err(|err| Some(err))?;
-                let var = Reference::parse(&var.get(1..).unwrap().to_vec())?.ok()?;
-                let val = Value::parse(&val.get(1..).unwrap().to_vec())?.ok()?;
+            if let TokenType::String(s) = &tokens.get(0).unwrap().r#type {
+                if s == "let" {
+                    let (var, val) = tokens.split_at(
+                        tokens
+                            .iter()
+                            .position(|token| {
+                                if let TokenType::Char('=') = token.r#type {
+                                    true
+                                } else {
+                                    false
+                                }
+                            })
+                            .unwrap(),
+                    );
+                    // let var = Reference::parse(var.get(1..).unwrap().to_vec())?.map_err(|err| Some(err))?;
+                    let var = Reference::parse(&var.get(1..).unwrap().to_vec())?.ok()?;
+                    let val = Value::parse(&val.get(1..).unwrap().to_vec())?.ok()?;
 
-                Some(Ok(Self::Assignment {
-                    var,
-                    val,
-                    pos: tokens.into(),
-                }))
+                    Some(Ok(Self::Assignment {
+                        var,
+                        val,
+                        pos: tokens.into(),
+                    }))
+                } else {
+                    None
+                }
             } else {
                 None
             }
         }
         .or_else(|| {
-            if let TokenType::Keyword(Keyword::Include) = tokens.get(0).unwrap().r#type {
-                // TODO: Allow for multiple files per include statement?
-                if let Some(token) = tokens.get(1) {
-                    if let TokenType::String(str) = &token.r#type {
-                        Some(Ok(Self::Include(str.to_string())))
+            if let TokenType::String(s) = &tokens.get(0).unwrap().r#type {
+                if s == "include" {
+                    // TODO: Allow for multiple files per include statement?
+                    if let Some(token) = tokens.get(1) {
+                        if let TokenType::String(str) = &token.r#type {
+                            Some(Ok(Self::Include(str.to_string())))
+                        } else {
+                            unimplemented!("Handle error if provided input argument isn't a string")
+                        }
                     } else {
-                        unimplemented!("Handle error if provided input argument isn't a string")
+                        unimplemented!("Handle error if include has no argument")
                     }
                 } else {
-                    unimplemented!("Handle error if include has no argument")
+                    None
                 }
             } else {
                 None
@@ -484,7 +497,7 @@ mod tests {
 
     #[test]
     fn parse_literal_bool() {
-        let tokens = tokenize_str("true", &PathBuf::new(), 1, 1).unwrap();
+        let tokens = tokenize_str("True", &PathBuf::new(), 1, 1).unwrap();
         let lit = Literal::parse(&tokens).unwrap().unwrap();
         assert!(lit == Literal::Bool(true))
     }

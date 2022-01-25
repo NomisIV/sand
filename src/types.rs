@@ -68,6 +68,7 @@ pub struct Function {
 pub enum Literal {
     Nope,
     Str(String),
+    Char(char),
     Num(f64),
     Bool(bool),
     Fun(Callable),
