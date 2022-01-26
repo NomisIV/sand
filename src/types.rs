@@ -72,6 +72,7 @@ pub enum Literal {
     Char(char),
     Num(f64),
     Bool(bool),
+    List(Vec<Literal>),
     Fun(Callable),
     Set(HashMap<String, Literal>),
 }
@@ -114,6 +115,13 @@ impl Literal {
     pub fn as_bool(self) -> Result<bool, TypeError> {
         match self {
             Self::Bool(bool) => Ok(bool),
+            _ => Err(TypeError::new("Literal is not a boolean", &FilePos::temp())),
+        }
+    }
+
+    pub fn as_list(self) -> Result<Vec<Literal>, TypeError> {
+        match self {
+            Self::List(list) => Ok(list),
             _ => Err(TypeError::new("Literal is not a boolean", &FilePos::temp())),
         }
     }
