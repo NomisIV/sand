@@ -249,6 +249,12 @@ pub fn init_bool() -> Literal {
     Literal::Set(bool)
 }
 
+/* ======== LIST ======== */
+pub fn init_list() -> Literal {
+    let mut list = HashMap::new();
+    Literal::Set(list)
+}
+
 /* ======== CALLABLE ======== */
 pub fn init_fun() -> Literal {
     let mut fun = HashMap::new();
@@ -263,6 +269,7 @@ pub fn init_scope() -> Scope {
     scope.insert("Char".to_string(), init_char());
     scope.insert("Num".to_string(), init_num());
     scope.insert("Bool".to_string(), init_bool());
+    scope.insert("List".to_string(), init_list());
     scope.insert("Fun".to_string(), init_fun());
     scope
 }
