@@ -518,6 +518,13 @@ mod tests {
     }
 
     #[test]
+    fn parse_literal_list() {
+        let tokens = tokenize_str("[1, 2, 3]", FilePos::internal()).unwrap();
+        let lit = Literal::parse(&tokens).unwrap().unwrap();
+        assert!(lit == Literal::List(vec![Literal::Num(1.0), Literal::Num(2.0), Literal::Num(3.0)]))
+    }
+
+    #[test]
     fn parse_literal_fun() {
         let tokens = tokenize_str("() { foo(); }", FilePos::internal()).unwrap();
         let lit = Literal::parse(&tokens).unwrap().unwrap();
