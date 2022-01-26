@@ -51,13 +51,17 @@ impl Parse for Function {
                 }
             }
 
-            if let TokenType::Group { r#type: GroupType::Curly, tokens: body_tokens } = &tokens.get(1).unwrap().r#type {
+            if let TokenType::Group {
+                r#type: GroupType::Curly,
+                tokens: body_tokens,
+            } = &tokens.get(1).unwrap().r#type
+            {
                 let body = Statements::parse(&body_tokens)?.ok()?;
-                    Some(Ok(Self {
-                        args,
-                        body,
-                        pos: tokens.into(),
-                    }))
+                Some(Ok(Self {
+                    args,
+                    body,
+                    pos: tokens.into(),
+                }))
             } else {
                 None
             }
@@ -88,6 +92,25 @@ impl Parse for Literal {
                         "False" => Some(Ok(Self::Bool(false))),
                         _ => None,
                     },
+                    TokenType::Group {
+                        r#type: GroupType::Brack,
+                        tokens: l,
+                    } => {
+                        let mut lit_tokens = l.iter();
+                        let mut literals = Vec::new();
+                        while let Some(token) = lit_tokens.next() {
+                            if let Some(token2) = lit_tokens.next() {
+                                if let TokenType::Char(',') = token2.r#type {
+                                    literals.push(Literal::parse(&vec![token.clone()])?.ok()?);
+                                } else {
+                                    return None; // TODO: This should be an error
+                                }
+                            } else {
+                                literals.push(Literal::parse(&vec![token.clone()])?.ok()?);
+                            }
+                        }
+                        Some(Ok(Self::List(literals)))
+                    }
                     _ => None,
                 }
             } else {
@@ -252,7 +275,14 @@ impl Parse for Statement {
                     // TODO: Allow for multiple files per include statement?
                     if let Some(token) = tokens.get(1) {
                         if let TokenType::StringLit(str) = &token.r#type {
-                            let file = token.pos.file.parent().unwrap().join(str).canonicalize().unwrap();
+                            let file = token
+                                .pos
+                                .file
+                                .parent()
+                                .unwrap()
+                                .join(str)
+                                .canonicalize()
+                                .unwrap();
                             Some(Ok(Self::Include(file)))
                         } else {
                             unimplemented!("Handle error if provided input argument isn't a string")
@@ -321,19 +351,13 @@ impl Parse for Statements {
 
 pub fn parse_file(tokens: Vec<Token>) -> Result<Statements, SandError> {
     Statements::parse(&tokens)
-        .ok_or_else(|| {
-            SandError::from(ParseError::new(
-                "File cannot be parsed",
-                tokens,
-            ))
-        })?
+        .ok_or_else(|| SandError::from(ParseError::new("File cannot be parsed", tokens)))?
         .map_err(|err| SandError::from(err))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
 
     // TODO: Add tests which *should* fail to check that parsing functions fail when they should
 
@@ -361,7 +385,7 @@ mod tests {
 
     #[test]
     fn parse_statement_assignment() {
-        let tokens = tokenize_str("let foo = \"hello\"", &PathBuf::new(), 1, 1).unwrap();
+        let tokens = tokenize_str("let foo = \"hello\"", FilePos::internal()).unwrap();
         let statement = Statement::parse(&tokens).unwrap().unwrap();
         match statement {
             Statement::Assignment { .. } => (),
@@ -371,7 +395,7 @@ mod tests {
 
     #[test]
     fn parse_statement_value() {
-        let tokens = tokenize_str("foo()", &PathBuf::new(), 1, 1).unwrap();
+        let tokens = tokenize_str("foo()", FilePos::internal()).unwrap();
         let statement = Statement::parse(&tokens).unwrap().unwrap();
         match statement {
             Statement::Value(..) => (),
@@ -379,16 +403,17 @@ mod tests {
         }
     }
 
-    #[test]
-    fn parse_statement_include() {
-        let tokens = tokenize_str("include \"std.sand\"", &PathBuf::new(), 1, 1).unwrap();
-        let statement = Statement::parse(&tokens).unwrap().unwrap();
-        assert!(statement == Statement::Include(PathBuf::from("std.sand")))
-    }
+    // TODO: This one is difficult to test without a filetree
+    // #[test]
+    // fn parse_statement_include() {
+    //     let tokens = tokenize_str("include \"std.sand\"", &PathBuf::from("tests/parse_test_statement_include.sand"), 1, 1).unwrap();
+    //     let statement = Statement::parse(&tokens).unwrap().unwrap();
+    //     assert!(statement == Statement::Include(PathBuf::from("std.sand")))
+    // }
 
     #[test]
     fn parse_reference_var() {
-        let tokens = tokenize_str("foo", &PathBuf::new(), 1, 1).unwrap();
+        let tokens = tokenize_str("foo", FilePos::internal()).unwrap();
         let reference = Reference::parse(&tokens).unwrap().unwrap();
         match reference {
             Reference::Var(..) => (),
@@ -398,7 +423,7 @@ mod tests {
 
     #[test]
     fn parse_reference_member() {
-        let tokens = tokenize_str("Foo.bar", &PathBuf::new(), 1, 1).unwrap();
+        let tokens = tokenize_str("Foo.bar", FilePos::internal()).unwrap();
         let reference = Reference::parse(&tokens).unwrap().unwrap();
         match reference {
             Reference::Member { .. } => (),
@@ -408,7 +433,7 @@ mod tests {
 
     #[test]
     fn parse_reference_member_complex() {
-        let tokens = tokenize_str("Foo.bar().baz", &PathBuf::new(), 1, 1).unwrap();
+        let tokens = tokenize_str("Foo.bar().baz", FilePos::internal()).unwrap();
         let reference = Reference::parse(&tokens).unwrap().unwrap();
         match reference {
             Reference::Member { .. } => (),
@@ -418,7 +443,7 @@ mod tests {
 
     #[test]
     fn parse_value_literal() {
-        let tokens = tokenize_str("5", &PathBuf::new(), 1, 1).unwrap();
+        let tokens = tokenize_str("5", FilePos::internal()).unwrap();
         let val = Value::parse(&tokens).unwrap().unwrap();
         match val {
             Value::Lit(..) => (),
@@ -428,7 +453,7 @@ mod tests {
 
     #[test]
     fn parse_value_reference() {
-        let tokens = tokenize_str("foo", &PathBuf::new(), 1, 1).unwrap();
+        let tokens = tokenize_str("foo", FilePos::internal()).unwrap();
         let val = Value::parse(&tokens).unwrap().unwrap();
         match val {
             Value::Ref(..) => (),
@@ -438,7 +463,7 @@ mod tests {
 
     #[test]
     fn parse_value_funcall() {
-        let tokens = tokenize_str("foo()", &PathBuf::new(), 1, 1).unwrap();
+        let tokens = tokenize_str("foo()", FilePos::internal()).unwrap();
         let val = Value::parse(&tokens).unwrap().unwrap();
         match val {
             Value::FunCall { params, .. } => assert!(params.len() == 0),
@@ -448,7 +473,8 @@ mod tests {
 
     #[test]
     fn parse_value_funcall_complex() {
-        let tokens = tokenize_str("foo(1, \"hello\", bar())", &PathBuf::new(), 1, 1).unwrap();
+        let tokens = tokenize_str("foo(1, \"hello\", bar())", FilePos::internal()).unwrap();
+        println!("Tokens: {:?}", tokens);
         let val = Value::parse(&tokens).unwrap().unwrap();
         match val {
             Value::FunCall { params, .. } => assert!(params.len() == 3),
@@ -458,42 +484,42 @@ mod tests {
 
     #[test]
     fn parse_literal_nope() {
-        let tokens = tokenize_str("Nope", &PathBuf::new(), 1, 1).unwrap();
+        let tokens = tokenize_str("Nope", FilePos::internal()).unwrap();
         let lit = Literal::parse(&tokens).unwrap().unwrap();
         assert!(lit == Literal::Nope)
     }
 
     #[test]
     fn parse_literal_string() {
-        let tokens = tokenize_str("\"hello\"", &PathBuf::new(), 1, 1).unwrap();
+        let tokens = tokenize_str("\"hello\"", FilePos::internal()).unwrap();
         let lit = Literal::parse(&tokens).unwrap().unwrap();
         assert!(lit == Literal::Str("hello".to_string()))
     }
 
     #[test]
     fn parse_literal_number() {
-        let tokens = tokenize_str("5", &PathBuf::new(), 1, 1).unwrap();
+        let tokens = tokenize_str("5", FilePos::internal()).unwrap();
         let lit = Literal::parse(&tokens).unwrap().unwrap();
         assert!(lit == Literal::Num(5.0))
     }
 
     #[test]
     fn parse_literal_number_float() {
-        let tokens = tokenize_str("5.0", &PathBuf::new(), 1, 1).unwrap();
+        let tokens = tokenize_str("5.0", FilePos::internal()).unwrap();
         let lit = Literal::parse(&tokens).unwrap().unwrap();
         assert!(lit == Literal::Num(5.0))
     }
 
     #[test]
     fn parse_literal_bool() {
-        let tokens = tokenize_str("True", &PathBuf::new(), 1, 1).unwrap();
+        let tokens = tokenize_str("True", FilePos::internal()).unwrap();
         let lit = Literal::parse(&tokens).unwrap().unwrap();
         assert!(lit == Literal::Bool(true))
     }
 
     #[test]
     fn parse_literal_fun() {
-        let tokens = tokenize_str("() { foo(); }", &PathBuf::new(), 1, 1).unwrap();
+        let tokens = tokenize_str("() { foo(); }", FilePos::internal()).unwrap();
         let lit = Literal::parse(&tokens).unwrap().unwrap();
         match lit {
             Literal::Fun { .. } => (),
@@ -503,7 +529,7 @@ mod tests {
 
     #[test]
     fn parse_function() {
-        let tokens = tokenize_str("() { foo(); }", &PathBuf::new(), 1, 1).unwrap();
+        let tokens = tokenize_str("() { foo(); }", FilePos::internal()).unwrap();
         let fun = Function::parse(&tokens).unwrap().unwrap();
         assert!(fun.args.len() == 0)
     }
@@ -512,9 +538,7 @@ mod tests {
     fn parse_function_complex() {
         let tokens = tokenize_str(
             "(foo, bar, baz) { foo(); \"hello\"; }",
-            &PathBuf::new(),
-            1,
-            1,
+            FilePos::internal()
         )
         .unwrap();
         let fun = Function::parse(&tokens).unwrap().unwrap();
@@ -523,27 +547,27 @@ mod tests {
 
     #[test]
     fn parse_variable1() {
-        let tokens = tokenize_str("foo", &PathBuf::new(), 1, 1).unwrap();
+        let tokens = tokenize_str("foo", FilePos::internal()).unwrap();
         let fun = Var::parse(&tokens).unwrap().unwrap();
         assert!(fun.name == "foo")
     }
 
     #[test]
     fn parse_variable2() {
-        let tokens = tokenize_str("foo_bar", &PathBuf::new(), 1, 1).unwrap();
+        let tokens = tokenize_str("foo_bar", FilePos::internal()).unwrap();
         let fun = Var::parse(&tokens).unwrap().unwrap();
         assert!(fun.name == "foo_bar")
     }
 
     #[test]
     fn parse_variable_bad1() {
-        let tokens = tokenize_str("5foo", &PathBuf::new(), 1, 1).unwrap();
+        let tokens = tokenize_str("5foo", FilePos::internal()).unwrap();
         assert!(Var::parse(&tokens) == None)
     }
 
     #[test]
     fn parse_variable_bad2() {
-        let tokens = tokenize_str("fo.o", &PathBuf::new(), 1, 1).unwrap();
+        let tokens = tokenize_str("fo.o", FilePos::internal()).unwrap();
         assert!(Var::parse(&tokens) == None)
     }
 }

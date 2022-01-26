@@ -1,12 +1,11 @@
-use std::path::PathBuf;
 use std::collections::HashMap;
 use std::fs;
 
-use crate::FilePos;
 use crate::intrinsics::init_scope;
 use crate::parser::parse_file;
 use crate::tokenizer::tokenize_str;
 use crate::types::*;
+use crate::FilePos;
 use crate::SandError;
 
 pub type Scope = HashMap<String, Literal>;
@@ -66,6 +65,10 @@ impl Interpret for Reference {
                     Literal::Bool(bool) => {
                         scope.insert("self".to_string(), Literal::Bool(bool.clone()));
                         scope.get("Bool").unwrap().clone().as_set().unwrap()
+                    }
+                    Literal::List(list) => {
+                        scope.insert("self".to_string(), Literal::List(list.clone()));
+                        scope.get("List").unwrap().clone().as_set().unwrap()
                     }
                     Literal::Fun(fun) => {
                         scope.insert("self".to_string(), Literal::Fun(fun.clone()));
@@ -139,7 +142,7 @@ impl Interpret for Statement {
                         &FilePos::temp(),
                     )
                 })?;
-                let tokens = tokenize_str(&str, &PathBuf::from(&file), 1, 1).map_err(|err| {
+                let tokens = tokenize_str(&str, FilePos::new(&file, 1, 1)).map_err(|err| {
                     InterpretingError::new(
                         &format!(
                             "Cannot tokenize `{}` because:\n{}",
@@ -195,34 +198,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn interpret_block() {
-        let str = r#"{
-            "Hello World!"
-        }"#;
-        let tokens = tokenize_str(str, &PathBuf::new(), 1, 1).unwrap();
-        let tree = parse_file(tokens).unwrap();
-        assert!(tree.interpret(&mut init_scope()).unwrap() != Literal::Nope)
-    }
-
-    #[test]
-    fn interpret_block_complex() {
-        let str = r#"{
-            69;
-            "Hello World!";
-            420;
-        }"#;
-        let tokens = tokenize_str(str, &PathBuf::new(), 1, 1).unwrap();
-        let tree = parse_file(tokens).unwrap();
-        assert!(tree.interpret(&mut init_scope()).unwrap() == Literal::Nope)
-    }
-
-    #[test]
     fn interpret_statement_assignment() {
-        let str = r#"{
-            let foo = "Hello World!";
-            foo
-        }"#;
-        let tokens = tokenize_str(str, &PathBuf::new(), 1, 1).unwrap();
+        let str = r#"let foo = "Hello World!"; foo"#;
+        let tokens = tokenize_str(str, FilePos::internal()).unwrap();
         let tree = parse_file(tokens).unwrap();
         let mut scope = init_scope();
         tree.interpret(&mut scope).unwrap();
@@ -230,38 +208,33 @@ mod tests {
         assert!(scope.get("foo").unwrap() == &Literal::Str("Hello World!".to_string()))
     }
 
-    #[test]
-    fn interpret_statement_assignment_complex() {
-        let str = r#"{
-            let Foo.bar = "Hello World!";
-        }"#;
-        let tokens = tokenize_str(str, &PathBuf::new(), 1, 1).unwrap();
-        let tree = parse_file(tokens).unwrap();
-        let mut scope = init_scope();
-        tree.interpret(&mut scope).unwrap();
-        assert!(scope.contains_key("Foo"));
-        let foo = scope.get("Foo").unwrap().clone().as_set().unwrap();
-        assert!(foo.contains_key("bar"));
-        assert!(foo.get("bar").unwrap() == &Literal::Str("Hello World!".to_string()))
-    }
+    // TODO: This is not testable until I can define sets
+    // #[test]
+    // fn interpret_statement_assignment_complex() {
+    //     let str = r#"let Foo.bar = "Hello World!";"#;
+    //     let tokens = tokenize_str(str, FilePos::internal()).unwrap();
+    //     let tree = parse_file(tokens).unwrap();
+    //     let mut scope = init_scope();
+    //     tree.interpret(&mut scope).unwrap();
+    //     assert!(scope.contains_key("Foo"));
+    //     let foo = scope.get("Foo").unwrap().clone().as_set().unwrap();
+    //     assert!(foo.contains_key("bar"));
+    //     assert!(foo.get("bar").unwrap() == &Literal::Str("Hello World!".to_string()))
+    // }
 
-    #[test]
-    fn interpret_statement_include() {
-        // TODO: This one is harder to test, since it depends on external files
-        // let str = r#"{
-        //     "Hello World!"
-        // }"#;
-        // let tokens = tokenize_str(str, &PathBuf::new(), 1, 1).unwrap();
-        // let tree = parse_file(tokens).unwrap();
-        // assert!(tree.interpret(&mut init_scope()).unwrap() == Literal::Str("Hello World!".to_string()))
-    }
+    // TODO: This one is harder to test, since it depends on external files
+    // #[test]
+    // fn interpret_statement_include() {
+    //     let str = r#"include "std.sand""#;
+    //     let tokens = tokenize_str(str, &PathBuf::new(), 1, 1).unwrap();
+    //     let tree = parse_file(tokens).unwrap();
+    //     assert!(tree.interpret(&mut init_scope()).unwrap() == Literal::Str("Hello World!".to_string()))
+    // }
 
     #[test]
     fn interpret_value_lit() {
-        let str = r#"{
-            "Hello World!"
-        }"#;
-        let tokens = tokenize_str(str, &PathBuf::new(), 1, 1).unwrap();
+        let str = r#""Hello World!""#;
+        let tokens = tokenize_str(str, FilePos::internal()).unwrap();
         let tree = parse_file(tokens).unwrap();
         assert!(
             tree.interpret(&mut init_scope()).unwrap() == Literal::Str("Hello World!".to_string())
@@ -270,33 +243,24 @@ mod tests {
 
     #[test]
     fn interpret_value_ref() {
-        let str = r#"{
-            let foo = "hello";
-            foo
-        }"#;
-        let tokens = tokenize_str(str, &PathBuf::new(), 1, 1).unwrap();
+        let str = r#"let foo = "hello"; foo"#;
+        let tokens = tokenize_str(str, FilePos::internal()).unwrap();
         let tree = parse_file(tokens).unwrap();
         assert!(tree.interpret(&mut init_scope()).unwrap() == Literal::Str("hello".to_string()))
     }
 
     #[test]
     fn interpret_value_ref_complex() {
-        let str = r#"{
-            1.add(1)
-        }"#;
-        let tokens = tokenize_str(str, &PathBuf::new(), 1, 1).unwrap();
+        let str = r#"1.add(1)"#;
+        let tokens = tokenize_str(str, FilePos::internal()).unwrap();
         let tree = parse_file(tokens).unwrap();
         assert!(tree.interpret(&mut init_scope()).unwrap() == Literal::Num(2.0))
     }
 
     #[test]
     fn interpret_value_funcall() {
-        let str = r#"{
-            (var) {
-                var
-            } ("foo")
-        }"#;
-        let tokens = tokenize_str(str, &PathBuf::new(), 1, 1).unwrap();
+        let str = r#"(var) { var } ("foo")"#;
+        let tokens = tokenize_str(str, FilePos::internal()).unwrap();
         let tree = parse_file(tokens).unwrap();
         assert!(tree.interpret(&mut init_scope()).unwrap() == Literal::Str("foo".to_string()))
     }

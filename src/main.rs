@@ -1,4 +1,3 @@
-use std::env;
 use std::fmt;
 use std::fs;
 use std::path::PathBuf;
@@ -12,9 +11,8 @@ mod parser;
 mod tokenizer;
 mod types;
 
-use interpreter::InterpretingError;
 use interpreter::interpret_file;
-use intrinsics::*;
+use interpreter::InterpretingError;
 use parser::parse_file;
 use parser::ParseError;
 use tokenizer::tokenize_str;
@@ -41,7 +39,13 @@ impl fmt::Display for FilePos {
 
 impl fmt::Debug for FilePos {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}:{}:{}", self.file.file_name().unwrap().to_str().unwrap(), self.row, self.col)
+        write!(
+            f,
+            "{}:{}:{}",
+            self.file.file_name().unwrap().to_str().unwrap(),
+            self.row,
+            self.col
+        )
     }
 }
 
@@ -150,13 +154,14 @@ fn main() {
     let opt = Opt::from_args();
 
     let file_contents = fs::read_to_string(&opt.file).unwrap();
+    let pos = FilePos::new(&opt.file, 1, 1);
 
     let args = Vec::new(); // TODO
 
     match opt.subcommand {
         Cmd::Tokenize => {
             println!("==== File:\n{}", file_contents);
-            match tokenize_str(&file_contents, &opt.file, 1, 1) {
+            match tokenize_str(&file_contents, pos) {
                 Ok(tokens) => {
                     println!("==== Tokens:\n{:#?}", tokens);
                 }
@@ -167,7 +172,7 @@ fn main() {
         }
         Cmd::Parse => {
             println!("==== File:\n{}", file_contents);
-            match tokenize_str(&file_contents, &opt.file, 1, 1) {
+            match tokenize_str(&file_contents, pos) {
                 Ok(tokens) => match parse_file(tokens) {
                     Ok(tree) => {
                         println!("==== Tree:\n{:#?}", tree);
@@ -181,7 +186,7 @@ fn main() {
                 }
             }
         }
-        Cmd::Run => match tokenize_str(&file_contents, &opt.file, 1, 1) {
+        Cmd::Run => match tokenize_str(&file_contents, pos) {
             Ok(tokens) => match parse_file(tokens) {
                 Ok(tree) => match interpret_file(tree, args) {
                     Ok(exit_code) => exit(exit_code),
